@@ -51,7 +51,7 @@ interface Car {
    MyCarsScreen – Dealer APIs Only
    -------------------------------------------------------------- */
 const MyCarsScreen = ({navigation}: any) => {
-  const [selectedTab, setSelectedTab] = useState('Live bid');
+  const [selectedTab, setSelectedTab] = useState('My Cars');
   const [bidCars, setBidCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -140,7 +140,15 @@ const MyCarsScreen = ({navigation}: any) => {
           )
           .filter(Boolean);
 
-        if (urls.length > 0) return urls;
+        if (urls.length > 0) {
+          // try to warm the native image cache so images appear quickly
+          try {
+            await Promise.allSettled(urls.map(u => Image.prefetch(String(u))));
+          } catch (e) {
+            // ignore prefetch failures
+          }
+          return urls;
+        }
       } catch (parseError) {
         console.error('Parse error:', parseError);
       }
@@ -158,9 +166,11 @@ const MyCarsScreen = ({navigation}: any) => {
   /* ----------------------------------------------------------------
      FETCH CARS + PRE-FETCH IMAGES
      ---------------------------------------------------------------- */
-  const fetchBidCars = async () => {
+  const CACHE_KEY_PREFIX = 'cached_bidCars_dealer_';
+
+  const fetchBidCars = async (showLoading = true) => {
     if (!dealerId) return;
-    setLoading(true);
+    if (showLoading) setLoading(true);
     try {
       const res = await fetch(
         `https://car01.dostenterprises.com/BeadingCarController/getByDealerID/${dealerId}`,
@@ -201,24 +211,89 @@ const MyCarsScreen = ({navigation}: any) => {
 
       const results = await Promise.all(imagePromises);
 
-      setBidCars(prev =>
-        prev.map(c => {
-          const found = results.find(r => r.id === c.id);
-          return found ? {...c, images: found.images} : c;
-        }),
-      );
+      // merge fetched images into the cars array and persist
+      const updatedCars = cars.map(car => {
+        const found = results.find(r => r.id === car.id);
+        return found ? {...car, images: found.images} : car;
+      });
+
+      setBidCars(updatedCars);
+
+      // Persist to AsyncStorage (best-effort)
+      try {
+        AsyncStorage.setItem(`${CACHE_KEY_PREFIX}${dealerId}`, JSON.stringify(updatedCars)).catch(() => {});
+      } catch (e) {
+        // ignore
+      }
 
       setFetchingImages(new Set());
     } catch (error) {
       setBidCars([]);
       Alert.alert('Error', 'Failed to fetch cars.');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
+  // Load cached cars first so the UI can show immediately, and then
+  // revalidate in the background (no loading spinner when cache present).
   useEffect(() => {
-    if (dealerId) fetchBidCars();
+    if (!dealerId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}${dealerId}`);
+        if (!cached) {
+          // no cache — show loader
+          await fetchBidCars(true);
+          return;
+        }
+
+        const parsed: Car[] = JSON.parse(cached);
+        if (cancelled) return;
+
+        // Display cached data immediately without showing loader
+        setBidCars(parsed);
+
+        // mark images that still need fetching
+        setFetchingImages(new Set(parsed.filter(c => !c.images || c.images.length === 0).map(c => c.id)));
+
+        // Warm native cache for any images we already have in cache
+        const urlsToPrefetch: string[] = [];
+        parsed.forEach(c => {
+          if (c.images && Array.isArray(c.images) && c.images.length > 0) {
+            urlsToPrefetch.push(...c.images);
+          } else if (c.imageUrl) urlsToPrefetch.push(c.imageUrl);
+        });
+
+        if (urlsToPrefetch.length > 0) {
+          // fire-and-forget prefetch
+          Promise.allSettled(urlsToPrefetch.map(u => Image.prefetch(String(u)))).then(() => {
+            // Images warmed — clear their ids from fetching set
+            setFetchingImages(prev => {
+              const next = new Set(prev);
+              parsed.forEach(c => {
+                if (c.images && c.images.length > 0) next.delete(c.id);
+                if (c.imageUrl && !(c.images && c.images.length > 0)) next.delete(c.id);
+              });
+              return next;
+            });
+          }).catch(()=>{});
+        }
+
+        // Revalidate in background quietly (no global spinner)
+        fetchBidCars(false);
+      } catch (err) {
+        // If cached read/parsing fails, fall back to a normal fetch
+        fetchBidCars(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [dealerId]);
 
   /* ----------------------------------------------------------------
@@ -247,7 +322,7 @@ const MyCarsScreen = ({navigation}: any) => {
   const dataToShow =
     selectedTab === 'Wishlist'
       ? bidCars.filter(c => isWishlisted(c.id))
-      : selectedTab === 'Live bid'
+      : selectedTab === 'My Cars'
       ? bidCars
       : [];
 
@@ -353,7 +428,7 @@ const MyCarsScreen = ({navigation}: any) => {
             style={styles.logoButton}
             onPress={() => navigation.goBack()}>
             <Image
-              source={require('../../assets/images/logo1.png')}
+              source={require('../../assets/images/caryanam.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
@@ -375,7 +450,7 @@ const MyCarsScreen = ({navigation}: any) => {
 
       {/* TABS */}
       <View style={styles.tabRow}>
-        {['Live bid', 'OCB nego', 'Wishlist'].map(tab => (
+        {['My Cars', 'OCB nego', 'Wishlist'].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[
@@ -400,11 +475,7 @@ const MyCarsScreen = ({navigation}: any) => {
       </View>
 
       {/* LIST / EMPTY / LOADING */}
-      {loading ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Loading cars...</Text>
-        </View>
-      ) : dataToShow.length === 0 ? (
+      {dataToShow.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons
             name={selectedTab === 'Wishlist' ? 'heart-outline' : 'car-outline'}

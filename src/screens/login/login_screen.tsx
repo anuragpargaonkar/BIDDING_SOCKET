@@ -17,6 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useWebSocket} from '../../utility/WebSocketConnection';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import styles from './Login.styles';
 
 const {width, height} = Dimensions.get('window');
 
@@ -64,9 +65,7 @@ const Login = () => {
 
       if (dealerId) {
         await AsyncStorage.setItem(DEALER_ID_KEY, dealerId);
-        console.log('✅ Dealer ID stored:', dealerId);
-      } else {
-        console.warn('⚠️ No dealer ID found in login response');
+        console.log('Dealer ID stored:', dealerId);
       }
 
       await AsyncStorage.setItem(
@@ -80,9 +79,9 @@ const Login = () => {
         }),
       );
 
-      console.log('✅ Auth data stored successfully');
+      console.log('Auth data stored successfully');
     } catch (error) {
-      console.error('❌ Error storing auth data:', error);
+      console.error('Error storing auth data:', error);
     }
   };
 
@@ -93,14 +92,12 @@ const Login = () => {
       const jsonPayload = decodeURIComponent(
         atob(base64)
           .split('')
-          .map(function (c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-          })
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
           .join(''),
       );
       return JSON.parse(jsonPayload);
     } catch (error) {
-      console.error('❌ Error parsing JWT token:', error);
+      console.error('Error parsing JWT token:', error);
       return null;
     }
   };
@@ -113,6 +110,7 @@ const Login = () => {
 
     try {
       setLoading(true);
+
       const response = await fetch(
         'https://car01.dostenterprises.com/jwt/login',
         {
@@ -129,20 +127,16 @@ const Login = () => {
       );
 
       const responseText = await response.text();
-      console.log('=== LOGIN RESPONSE ===');
-      console.log('Response text:', responseText);
+      console.log('LOGIN RESPONSE:', responseText);
 
       let token: string | null = null;
+
       try {
         const data = JSON.parse(responseText);
         if (data.token) token = data.token;
         else if (typeof data === 'string' && data.length > 100) token = data;
       } catch {
-        if (
-          responseText &&
-          responseText.length > 100 &&
-          responseText.includes('.')
-        ) {
+        if (responseText && responseText.includes('.') && responseText.length > 100) {
           token = responseText;
         }
       }
@@ -164,14 +158,10 @@ const Login = () => {
           decodedToken?.dealer ||
           null;
 
-        console.log('User ID:', userId);
-        console.log('Dealer ID:', dealerId);
-
-        // Always store auth data and connect WebSocket (no token in WS)
         await storeAuthData(token, userId, userEmail, dealerId, decodedToken);
         connectWebSocket();
 
-        // 🔒 Check dealer access
+        // Check dealer access
         if (!dealerId) {
           Alert.alert(
             'Access Denied',
@@ -181,8 +171,8 @@ const Login = () => {
           return;
         }
 
-        // ✅ Dealer can continue to Home
-        Alert.alert('Success', 'Login Successful! Connecting to live bids...');
+        Alert.alert('Success', 'Login Successful!');
+
         setTimeout(() => {
           navigation.navigate('Home', {
             token: token,
@@ -191,16 +181,7 @@ const Login = () => {
           });
         }, 1000);
       } else {
-        let errorMessage = 'Invalid credentials';
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          if (responseText && responseText.length < 100) {
-            errorMessage = responseText;
-          }
-        }
-        Alert.alert('Login Failed', errorMessage);
+        Alert.alert('Login Failed', 'Invalid credentials');
       }
     } catch (error) {
       Alert.alert(
@@ -218,16 +199,19 @@ const Login = () => {
       style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#051A2F" />
 
-      {/* Top Curved Section with Centered Logo */}
+      {/* Top Section */}
       <View style={styles.topCurvedSection}>
         <Image
-          source={require('../../assets/images/logo1.png')}
+          source={require('../../assets/images/caryanam.png')}
           style={styles.logo}
           resizeMode="contain"
         />
+
+        {/* Added title below logo */}
+        {/* <Text style={styles.logoTitle}>CARYANAMINDIA</Text> */}
       </View>
 
-      {/* White Full Curved Card Section */}
+      {/* Card */}
       <View style={styles.cardContainer}>
         <View style={styles.content}>
           <View style={styles.formGroup}>
@@ -246,6 +230,7 @@ const Login = () => {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Password</Text>
+
             <View style={styles.passwordContainer}>
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -256,6 +241,7 @@ const Login = () => {
                   color="#666"
                 />
               </TouchableOpacity>
+
               <TextInput
                 placeholder="Enter password"
                 value={password}
@@ -290,73 +276,5 @@ const Login = () => {
     </LinearGradient>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {flex: 1},
-  topCurvedSection: {
-    paddingTop: 150,
-    paddingBottom: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    width: 150,
-    height: 100,
-  },
-  cardContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 40,
-    marginHorizontal: 20,
-    marginBottom: 150,
-    paddingTop: 40,
-    paddingHorizontal: 30,
-    elevation: 15,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-  },
-  content: {flex: 1},
-  formGroup: {marginBottom: 20},
-  label: {
-    color: '#333',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f8f8f8',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    padding: 15,
-    color: '#333',
-    fontSize: 15,
-  },
-  passwordContainer: {flexDirection: 'row', alignItems: 'center'},
-  eyeIconFront: {position: 'absolute', right: 15, top: 15, zIndex: 1},
-  passwordInput: {paddingLeft: 10, flex: 1},
-  forgotContainer: {alignItems: 'flex-end', marginTop: -10, marginBottom: 15},
-  forgotText: {color: '#61AFFE', fontSize: 14, fontWeight: '500'},
-  loginButton: {
-    backgroundColor: '#61AFFE',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#61AFFE',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-  },
-  loginButtonDisabled: {opacity: 0.6},
-  loginButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
-    letterSpacing: 1,
-  },
-});
 
 export default Login;

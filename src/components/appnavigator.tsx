@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from '../screens/login/login_screen';
 import BottomNavigationScreen from '../components/BottomNavigation/bottomnavigation_screen';
 import SignUpScreen from '../screens/signup/signup_screen';
-import ForgotPasswordScreen from '../utility/ForgotPassword'; // 👈 new screen
+import ForgotPasswordScreen from '../screens/forgotpassword/ForgotPassword';
 import InspectionReport from '../screens/mycars/InspectionReport';
  
 /**

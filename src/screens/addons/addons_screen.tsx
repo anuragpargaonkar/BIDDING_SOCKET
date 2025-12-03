@@ -52,9 +52,36 @@ const AddOnsScreen: React.FC = () => {
   const refreshSpin = useRef(new Animated.Value(0)).current;
 
   const ITEMS_PER_PAGE = 6;
+  const CACHE_KEY = 'cached_finalBids';
 
   useEffect(() => {
-    fetchFinalBids();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEY);
+        if (!cached) {
+          // no cache — show loader
+          await fetchFinalBids(true);
+          return;
+        }
+
+        const bids: FinalBid[] = JSON.parse(cached);
+        if (cancelled) return;
+
+        // show cached data immediately and revalidate in background
+        setFinalBids(bids);
+        setDisplayedBids(bids.slice(0, ITEMS_PER_PAGE));
+        fetchFinalBids(false);
+      } catch (e) {
+        // fallback to normal fetch if cache read fails
+        fetchFinalBids(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -62,9 +89,9 @@ const AddOnsScreen: React.FC = () => {
     animateListIn();
   }, [displayedBids]);
 
-  const fetchFinalBids = async () => {
+  const fetchFinalBids = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
       const token = await AsyncStorage.getItem('auth_token');
       if (!token) throw new Error('No auth token found');
@@ -92,10 +119,17 @@ const AddOnsScreen: React.FC = () => {
       });
       setFinalBids(bids);
       setDisplayedBids(bids.slice(0, ITEMS_PER_PAGE));
+
+      // persist the fetched result for instant subsequent loads
+      try {
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(bids));
+      } catch (e) {
+        // best-effort cache write; ignore failures
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -231,7 +265,7 @@ const AddOnsScreen: React.FC = () => {
         <View style={styles.headerInner}>
           <View style={styles.logoCircle}>
             <Image
-              source={require('../../assets/images/logo1.png')}
+              source={require('../../assets/images/caryanam.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -252,7 +286,7 @@ const AddOnsScreen: React.FC = () => {
       </View>
 
       <View style={styles.contentWrap}>
-        {loading ? (
+        {loading && displayedBids.length === 0 ? (
           <ActivityIndicator
             size="large"
             color={COLORS.primary}

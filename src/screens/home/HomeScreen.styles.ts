@@ -28,7 +28,7 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#262a4f',
   },
-  searchContainer: {flexDirection: 'row', gap: 12, width: 320, height: 60},
+  searchContainer: {flexDirection: 'row', gap: 12, width: '100%', height: 60, paddingHorizontal: 16},
   searchBar: {
     flex: 1,
     flexDirection: 'row',

@@ -259,7 +259,7 @@ const AccountScreen = ({navigation}: any) => {
             onPress={() => navigation.navigate('Home')}>
             <View style={styles.logoWrapper}>
               <Image
-                source={require('../../assets/images/logo1.png')}
+                source={require('../../assets/images/caryanam.png')}
                 style={styles.logoImage}
                 resizeMode="cover"
               />
@@ -352,7 +352,7 @@ const AccountScreen = ({navigation}: any) => {
           <Text style={styles.storyText}>
             Your stories now have a new destination
           </Text>
-          <Text style={styles.bigCardSub}>Follow Caryanam Partners</Text>
+          <Text style={styles.bigCardSub}>Follow CARYANAMINDIA Partners</Text>
 
           <View style={styles.socialRow}>
             <TouchableOpacity

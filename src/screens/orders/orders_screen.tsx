@@ -169,7 +169,7 @@ const OrderScreen: React.FC = () => {
           {/* Logo Circle */}
           <View style={styles.logoCircle}>
             <Image
-              source={require('../../assets/images/logo1.png')}
+              source={require('../../assets/images/caryanam.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />

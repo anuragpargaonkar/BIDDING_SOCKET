@@ -1,4 +1,4 @@
-// src/screens/Auth/LoginStyles.ts
+// ForgotPasswordStyles.ts - Styles moved from ForgotPassword.tsx
 
 import {StyleSheet} from 'react-native';
 
@@ -7,7 +7,7 @@ const styles = StyleSheet.create({
 
   topCurvedSection: {
     paddingTop: 150,
-    paddingBottom: 30,
+    paddingBottom: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -30,86 +30,74 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 40,
     marginHorizontal: 20,
-    marginBottom: 140,
+    marginBottom: 170,
     paddingTop: 40,
     paddingHorizontal: 30,
     elevation: 15,
-
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.15,
     shadowRadius: 10,
   },
 
-  content: {flex: 1},
+  content: {flex: 1, justifyContent: 'flex-start'},
 
-  formGroup: {marginBottom: 20},
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#051A2F',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
 
   label: {
-    color: '#333',
-    fontSize: 14,
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#000',
     fontWeight: '500',
-    marginBottom: 5,
   },
 
   input: {
-    backgroundColor: '#f8f8f8',
     borderWidth: 2,
     borderColor: '#e0e0e0',
     borderRadius: 12,
     padding: 15,
-    fontSize: 15,
+    marginBottom: 20,
+    backgroundColor: '#f9f9f9',
     color: '#333',
+    fontSize: 15,
   },
 
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  eyeIconFront: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-    zIndex: 1,
-  },
-
-  passwordInput: {
-    paddingLeft: 10,
-    flex: 1,
-  },
-
-  forgotContainer: {
-    alignItems: 'flex-end',
-    marginTop: -10,
-    marginBottom: 15,
-  },
-
-  forgotText: {
-    color: '#61AFFE',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
-  loginButton: {
-    backgroundColor: '#61AFFE',
-    borderRadius: 12,
+  button: {
+    backgroundColor: '#1B4F72',
     paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-
-    shadowColor: '#61AFFE',
+    elevation: 3,
+    shadowColor: '#1B4F72',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.3,
     shadowRadius: 5,
   },
 
-  loginButtonDisabled: {opacity: 0.6},
+  buttonDisabled: {opacity: 0.6},
 
-  loginButtonText: {
+  buttonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
     letterSpacing: 1,
+  },
+
+  backButton: {
+    marginTop: 25,
+    alignItems: 'center',
+  },
+
+  backText: {
+    color: '#051A2F',
+    fontWeight: '500',
+    fontSize: 14,
   },
 });
 
