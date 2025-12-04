@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#051A2F',
-    // paddingTop: 5 // match your app theme color
+     paddingTop: 5 // match your app theme color
   },
 });
 

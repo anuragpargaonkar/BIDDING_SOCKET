@@ -43,8 +43,8 @@ type LoginScreenNavigationProp = StackNavigationProp<
 >;
 
 const Login = () => {
-  const [username, setUsername] = useState('asif.attar@caryanam.in');
-  const [password, setPassword] = useState('Pass@123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 

@@ -478,6 +478,7 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#262a4f',
     letterSpacing: -0.3,
+    marginRight: 115,
   },
   headerHeartIcon: {
     padding: 8,

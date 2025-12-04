@@ -24,6 +24,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import {useWishlist} from '../../context/WishlistContext';
 import {styles} from './HomeScreen.styles';
+// IMPORT BASE_URL FROM YOUR CONFIG
+import {BASE_URL} from '../../utility/serverConfig';
 
 interface Car {
   id: string;
@@ -78,12 +80,7 @@ const TOKEN_KEY = 'auth_token';
 const USER_ID_KEY = 'user_id';
 const AUCTION_DURATION_MS = 30 * 60 * 1000;
 
-// Toggle for client-side price polling to avoid continuous backend load
-const ENABLE_PRICE_POLLING = false;
-
 const HomeScreen: React.FC = () => {
-    // Add searchQuery state for search bar functionality
-    const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation<any>();
   const {wishlist, toggleWishlist, isWishlisted} = useWishlist();
   const [activeTab, setActiveTab] = useState<'LIVE' | 'OCB'>('LIVE');
@@ -131,6 +128,9 @@ const HomeScreen: React.FC = () => {
   const notificationAnim = useRef(new Animated.Value(-100)).current;
   const hasRequestedLiveCarsRef = useRef(false);
   const prevFilteredLiveCarsLengthRef = useRef(0);
+  
+  // Ref for polling to access latest cars without resetting interval
+  const filteredLiveCarsRef = useRef<Car[]>([]);
 
   // NEW: fetch lock set to prevent duplicate concurrent fetches
   const fetchingRef = useRef<Set<string>>(new Set());
@@ -147,7 +147,7 @@ const HomeScreen: React.FC = () => {
   } = useWebSocket();
 
   // === NOTIFICATION SYSTEM ===
-  const showNotification = useCallback(
+  /* const showNotification = useCallback(
     (car: Car, type: 'bid' | 'outbid' | 'won' | 'time') => {
       const carName = `${car.make || 'Toyota'} ${car.model || 'Innova'} ${
         car.variant || '2.8 ZX'
@@ -218,6 +218,7 @@ const HomeScreen: React.FC = () => {
     const randomType = types[Math.floor(Math.random() * types.length)];
     showNotification(randomCar, randomType);
   };
+  */
 
   // === HELPER FUNCTIONS ===
   const getCurrentDateTimeForAPI = useCallback((): string => {
@@ -257,39 +258,85 @@ const HomeScreen: React.FC = () => {
     )}:${String(seconds).padStart(2, '0')}`;
   }, []);
 
-  // === SEARCHABLE CAR DISPLAY ===
+  // Update ref whenever state changes
   useEffect(() => {
-    if (searchQuery && searchQuery.trim().length > 0) {
-      const q = searchQuery.toLowerCase();
-      const filtered = liveCars.filter(car => {
-        const bidId = car.bidCarId || car.id || '';
-        const details = carDetailsData[bidId] || carDetailsData[car.id] || {};
-        // Combine all searchable fields into one string for broad matching
-        const searchString = [
-          car.make,
-          car.model,
-          car.variant,
-          car.city,
-          car.rtoCode,
-          (car as any).registration,
-          details?.brand,
-          details?.model,
-          details?.variant,
-          details?.city,
-          details?.registration
-        ]
-          .filter(Boolean)
-          .map(f => String(f).toLowerCase())
-          .join(' ');
-        return searchString.includes(q);
-      });
-      setFilteredLiveCars(filtered);
-      return;
-    }
+    filteredLiveCarsRef.current = filteredLiveCars;
+  }, [filteredLiveCars]);
+
+  // === IMMEDIATE CAR DISPLAY (FALLBACK) ===
+  useEffect(() => {
+    // Set filteredLiveCars immediately when liveCars changes, but don't clear on empty
     if (liveCars.length > 0) {
       setFilteredLiveCars(liveCars);
+
+      // ✅ NEW: Sync WebSocket bid updates to livePrices state instantly
+      // This ensures that when a socket update comes in, the pricing logic everywhere (Modal, Card) sees it
+      setLivePrices(prev => {
+        const next = {...prev};
+        let changed = false;
+        liveCars.forEach(car => {
+          const id = car.id;
+          const bidId = car.bidCarId;
+          const currentBid = car.currentBid || 0;
+
+          // Update if socket has a newer/higher price than what we have in cache
+          if (currentBid > 0) {
+            // Update for main ID
+            if (!next[id] || currentBid > next[id].price) {
+              next[id] = {
+                ...(next[id] || {}),
+                price: currentBid,
+                timeLeft: next[id]?.timeLeft || '',
+              };
+              changed = true;
+            }
+            // Update for bidId if it exists and is different
+            if (
+              bidId &&
+              bidId !== id &&
+              (!next[bidId] || currentBid > next[bidId].price)
+            ) {
+              next[bidId] = {
+                ...(next[bidId] || {}),
+                price: currentBid,
+                timeLeft: next[bidId]?.timeLeft || '',
+              };
+              changed = true;
+            }
+          }
+        });
+        return changed ? next : prev;
+      });
+      
+      // ✅ Trigger an immediate refresh of prices from API to be safe
+      // This ensures if socket data was slightly stale, we correct it instantly
+      setTimeout(() => {
+         const currentCars = filteredLiveCarsRef.current;
+         if (currentCars.length > 0) {
+            currentCars.forEach(car => {
+               if (car.id) fetchLivePrice(car.id);
+            });
+         }
+      }, 500);
     }
-  }, [liveCars, searchQuery, carDetailsData]);
+  }, [liveCars]);
+
+  // === AUTOMATIC PRICE POLLING (3 Seconds) ===
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentCars = filteredLiveCarsRef.current;
+      if (currentCars.length > 0) {
+        // Fetch fresh prices for all visible cars
+        currentCars.forEach(car => {
+          if (car.id) {
+            fetchLivePrice(car.id);
+          }
+        });
+      }
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []); // Run once on mount
 
   // === AUCTION TIME LOGIC ===
   useEffect(() => {
@@ -359,7 +406,12 @@ const HomeScreen: React.FC = () => {
       if (expiredCarIds.length > 0) {
         setCarAuctionTimes(prev => {
           const updated = {...prev};
-          expiredCarIds.forEach(id => delete updated[id]);
+          const updatedLivePrices = {...livePrices}; // Also cleanup old price data
+          expiredCarIds.forEach(id => {
+            delete updated[id];
+            delete updatedLivePrices[id];
+          });
+          setLivePrices(updatedLivePrices);
           return updated;
         });
       }
@@ -408,24 +460,14 @@ const HomeScreen: React.FC = () => {
     // }, [connectionStatus]);
   }, []);
 
-  // === PRICE POLLING (DISABLED BY DEFAULT TO AVOID BACKEND LOOPS) ===
-  useEffect(() => {
-    if (!ENABLE_PRICE_POLLING) return;
-
-    if (filteredLiveCars.length > 0) {
-      const interval = setInterval(() => {
-        filteredLiveCars.forEach(car => {
-          if (car.id) fetchLivePrice(car.id);
-        });
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, []);
-
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      if (isConnected) getLiveCars();
+      if (isConnected) {
+        getLiveCars();
+        // Also force a price update
+        refreshAllCarPrices();
+      }
       else connectWebSocket();
     } catch (error) {
     } finally {
@@ -443,7 +485,8 @@ const HomeScreen: React.FC = () => {
     bidCarId: string,
   ): Promise<LivePriceData | null> => {
     try {
-      const livePriceUrl = `https://car01.dostenterprises.com/Bid/getliveValue?bidCarId=${bidCarId}`;
+      // UPDATED: Use BASE_URL
+      const livePriceUrl = `${BASE_URL}/Bid/getliveValue?bidCarId=${bidCarId}`;
       const response = await fetch(livePriceUrl);
       const data = await response.json();
       const price = data?.object?.price ?? 0;
@@ -483,7 +526,8 @@ const HomeScreen: React.FC = () => {
     fetchingRef.current.add(key);
 
     try {
-      const imageUrl = `https://car01.dostenterprises.com/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`;
+      // UPDATED: Use BASE_URL
+      const imageUrl = `${BASE_URL}/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`;
       const imageResponse = await fetch(imageUrl);
       const imageText = await imageResponse.text();
       let imageDataArray: any[] = [];
@@ -504,7 +548,8 @@ const HomeScreen: React.FC = () => {
             item.subtype?.toLowerCase() === 'coverimage') &&
           String(item.beadingCarId) === String(beadingCarId),
       );
-      const carIdUrl = `https://car01.dostenterprises.com/BeadingCarController/getByBidCarId/${bidCarId}`;
+      // UPDATED: Use BASE_URL
+      const carIdUrl = `${BASE_URL}/BeadingCarController/getByBidCarId/${bidCarId}`;
       const carIdResponse = await fetch(carIdUrl);
       const carIdText = await carIdResponse.text();
       let carIdData: any = null;
@@ -530,6 +575,7 @@ const HomeScreen: React.FC = () => {
       fetchingRef.current.delete(key);
     }
   };
+
   const triggerFetchCarData = () => {
     console.log('triggerFetchCarData called1');
     console.log('filteredLiveCars:', filteredLiveCars); // Check content here
@@ -571,6 +617,10 @@ const HomeScreen: React.FC = () => {
   const openCarDetailsModal = async (car: Car) => {
     setSelectedCarForDetails(car);
     setCarDetailsModalVisible(true);
+    // ✅ NEW: Fetch latest price immediately on view
+    if (car.id) {
+      await fetchLivePrice(car.id);
+    }
   };
 
   const openBidModal = async (bidCarId: string) => {
@@ -674,7 +724,8 @@ const HomeScreen: React.FC = () => {
         amount: bidValue,
       };
 
-      const bidUrl = `https://car01.dostenterprises.com/Bid/placeBid?bidCarId=${selectedCar.bidCarId}`;
+      // UPDATED: Use BASE_URL
+      const bidUrl = `${BASE_URL}/Bid/placeBid?bidCarId=${selectedCar.bidCarId}`;
       const response = await fetch(bidUrl, {
         method: 'POST',
         headers: {
@@ -705,7 +756,8 @@ const HomeScreen: React.FC = () => {
                 const car = filteredLiveCars.find(
                   c => c.id === selectedCar.bidCarId,
                 );
-                if (car) showNotification(car, 'bid');
+                // ✅ TRIGGER NOTIFICATION
+                // if (car) showNotification(car, 'bid');
               },
             },
           ],
@@ -749,8 +801,13 @@ const HomeScreen: React.FC = () => {
     const carDetails = carDetailsData[bidId] || carDetailsData[carId];
     // Look up live price using bidId first (as that's what we store it with), then carId
     const livePriceData = livePrices[bidId] || livePrices[carId];
-    const currentBid =
-      livePriceData?.price ?? car.currentBid ?? carDetails?.price ?? 0;
+
+    // ✅ UPDATED PRICE LOGIC: Takes the highest of API Price or WebSocket Price
+    const apiPrice = livePriceData?.price ?? 0;
+    const socketPrice = car.currentBid ?? 0;
+    const detailsPrice = carDetails?.price ?? 0;
+    const currentBid = Math.max(apiPrice, socketPrice, detailsPrice);
+
     const timeLeft = countdownTimers[carId] || '00:30:00';
     const wishlisted = isWishlisted(carId);
 
@@ -761,6 +818,18 @@ const HomeScreen: React.FC = () => {
         activeOpacity={0.95}
         onPress={() => openCarDetailsModal(car)}>
         <Image source={{uri: imageUrl}} style={styles.carImage} />
+        {/* <TouchableOpacity
+          style={styles.heartIcon}
+          onPress={e => {
+            e.stopPropagation();
+            toggleWishlist(carId);
+          }}>
+          <Ionicons
+            name={wishlisted ? 'heart' : 'heart-outline'}
+            size={24}
+            color={wishlisted ? '#e74c3c' : '#fff'}
+          />
+        </TouchableOpacity> */}
         {car.isScrap && (
           <View style={styles.scrapBadge}>
             <Text style={styles.scrapText}>SCRAP CAR</Text>
@@ -788,28 +857,21 @@ const HomeScreen: React.FC = () => {
             {carDetails?.ownerSerial || car.owner || '1st'} Owner •{' '}
             {carDetails?.fuelType || car.fuelType || 'Petrol'}
           </Text>
-            <View style={styles.bidSection}>
-              <View>
-                <Text style={styles.highestBid}>
-                  {livePriceData ? 'Live Bid' : 'Highest Bid'}
-                </Text>
-                <Text style={styles.bidAmount}>
-                  ₹{currentBid.toLocaleString()}
-                </Text>
+          <View style={styles.bidSection}>
+            <View>
+              <Text style={styles.highestBid}>
+                {livePriceData ? 'Live Bid 🔴' : 'Highest Bid'}
+              </Text>
+              <Text style={styles.bidAmount}>
+                ₹{currentBid.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.timerContainer}>
+              <Text style={styles.timeRemaining}>🕒 Time Left</Text>
+              <View style={styles.timerBox}>
+                <Text style={styles.timerText}>{timeLeft}</Text>
               </View>
-              <View style={styles.timerContainer}>
-                <View style={{flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6}}>
-                  <MaterialCommunityIcons
-                    name="clock-time-four-outline"
-                    size={14}
-                    color="#EF4444"
-                  />
-                  <Text style={styles.timeRemaining}>Time Left</Text>
-                </View>
-                <View style={styles.timerBox}>
-                  <Text style={styles.timerText}>{timeLeft}</Text>
-                </View>
-              </View>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -866,13 +928,21 @@ const HomeScreen: React.FC = () => {
       selectedCarForDetails.imageUrl ||
       'https://photos.caryanamindia.com/1453c850-c6a4-4d46-ab36-6c4dbab27f4c-crysta%201%20-%20Copy.jpg';
 
+    // ✅ NEW: Always look up the latest live car data from the list
+    // This ensures that even if selectedCarForDetails is stale, we get the fresh price/data
+    const liveCar =
+      filteredLiveCars.find(c => c.id === carId) || selectedCarForDetails;
+
     const carDetails = carDetailsData[carId] || carDetailsData[bidId];
     const livePriceData = livePrices[carId];
-    const currentBid =
-      livePriceData?.price ??
-      selectedCarForDetails.currentBid ??
-      carDetails?.price ??
-      5874000;
+
+    // ✅ UPDATED PRICE LOGIC IN MODAL
+    // Uses livePrices (synced with socket) OR the liveCar object from the list
+    const apiPrice = livePriceData?.price ?? 0;
+    const socketPrice = liveCar.currentBid ?? 0;
+    const detailsPrice = carDetails?.price ?? 0;
+    const currentBid = Math.max(apiPrice, socketPrice, detailsPrice);
+
     const timeLeft = countdownTimers[carId] || '23:24:00';
 
     const brand = carDetails?.brand || selectedCarForDetails.make || '2021';
@@ -912,7 +982,7 @@ const HomeScreen: React.FC = () => {
               <Ionicons name="arrow-back" size={24} color="#262a4f" />
             </TouchableOpacity>
             <Text style={styles.detailsHeaderTitle}>Car Details</Text>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => toggleWishlist(carId)}
               style={styles.headerHeartIcon}>
               <Ionicons
@@ -920,7 +990,7 @@ const HomeScreen: React.FC = () => {
                 size={24}
                 color={isWishlisted(carId) ? '#e74c3c' : '#262a4f'}
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           <ScrollView
@@ -972,7 +1042,6 @@ const HomeScreen: React.FC = () => {
                 </Text>
               </View>
 
-              {/* ✅ UPDATED BUTTON */}
               <TouchableOpacity
                 style={styles.inspectionReportButton}
                 onPress={() => {
@@ -1163,11 +1232,11 @@ const HomeScreen: React.FC = () => {
               activeOpacity={0.8}>
               <Text style={styles.placeBidButtonText}>PLACE BID</Text>
             </TouchableOpacity>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.interestedButton}
               activeOpacity={0.8}>
               <Text style={styles.interestedButtonText}>I am Interested</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </SafeAreaView>
       </Modal>
@@ -1181,7 +1250,7 @@ const HomeScreen: React.FC = () => {
       <LinearGradient
         colors={['#262a4f', '#353a65', '#262a4f']}
         style={styles.gradientBackground}>
-        {notifications.length > 0 && (
+        {/* {notifications.length > 0 && (
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleNotificationClick}
@@ -1223,20 +1292,21 @@ const HomeScreen: React.FC = () => {
               style={{marginLeft: 8}}
             />
           </TouchableOpacity>
-        )}
+        )} */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.profileSection}>
               {/* LOGO */}
               <Image
-                source={require('../../assets/images/caryanam.png')}
+                source={require('../../assets/images/logo1.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
             </View>
             <TouchableOpacity
               style={styles.notificationIcon}
-              onPress={handleNotificationClick}>
+              // onPress={handleNotificationClick}
+              >
               <Ionicons
                 name="notifications-outline"
                 size={26}
@@ -1250,19 +1320,9 @@ const HomeScreen: React.FC = () => {
               <Ionicons name="search" size={20} color="#262a4f" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search auction (make, model, city...)"
+                placeholder="Search auction"
                 placeholderTextColor="#999"
-                value={searchQuery}
-                onChangeText={text => setSearchQuery(text)}
-                returnKeyType="search"
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
-                  style={{paddingLeft: 8}}>
-                  <Ionicons name="close-circle" size={18} color="#999" />
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         </View>
@@ -1281,7 +1341,7 @@ const HomeScreen: React.FC = () => {
               {renderTab('LIVE', filteredLiveCars.length)}
               {renderTab('OCB', 0)}
             </View>
-            <View style={styles.banner}>
+            {/* <View style={styles.banner}>
               <View style={{flex: 1}}>
                 <View style={styles.newLaunchBadge}>
                   <Text style={styles.bannerTitle}>New launch</Text>
@@ -1290,11 +1350,7 @@ const HomeScreen: React.FC = () => {
                   Get used car loan for your customers{'\n'}Instant valuation |
                   100% digital
                 </Text>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => navigation.navigate('WinZone')}
-                  accessibilityLabel="Explore add-ons"
-                >
+                <TouchableOpacity activeOpacity={0.8}>
                   <View style={styles.exploreBtn}>
                     <Text style={styles.exploreText}>Explore</Text>
                   </View>
@@ -1304,7 +1360,7 @@ const HomeScreen: React.FC = () => {
                 source={require('../../assets/images/car3.png')}
                 style={styles.bannerImage}
               />
-            </View>
+            </View> */}
             <View style={styles.liveCarsHeaderContainer}>
               <View>
                 <Text style={styles.liveCarsHeader}>Live Cars</Text>
@@ -1335,20 +1391,17 @@ const HomeScreen: React.FC = () => {
                   color="#D1D5DB"
                 />
                 <Text style={styles.emptyText}>No live cars available</Text>
-                <TouchableOpacity onPress={handleRetry} activeOpacity={0.8}>
+                {/* <TouchableOpacity onPress={handleRetry} activeOpacity={0.8}>
                   <View style={styles.retryButton}>
                     <Text style={styles.retryText}>Retry</Text>
                   </View>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             )}
             <View style={{height: 100}} />
           </ScrollView>
         </View>
       </LinearGradient>
-
-      {/* CAR DETAILS MODAL */}
-      {renderCarDetailsModal()}
 
       {/* BID MODAL */}
       <Modal
@@ -1404,6 +1457,9 @@ const HomeScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* CAR DETAILS MODAL */}
+      {renderCarDetailsModal()}
     </SafeAreaView>
   );
 };

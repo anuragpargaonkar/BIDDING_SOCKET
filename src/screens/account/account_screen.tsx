@@ -288,7 +288,7 @@ const AccountScreen = ({navigation}: any) => {
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={{paddingBottom: 40}}>
-        <View style={styles.topBanner}>
+        {/* <View style={styles.topBanner}>
           <Text style={styles.topBannerText}>Get unlimited app access</Text>
           <Text style={styles.topBannerSub}>
             Buy <Text style={styles.highlight}>Basic</Text> at just ₹500 / month
@@ -296,7 +296,7 @@ const AccountScreen = ({navigation}: any) => {
           <TouchableOpacity style={{marginTop: 8}}>
             <Text style={styles.knowMore}>Know more</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         <TouchableOpacity
           activeOpacity={0.9}
@@ -326,7 +326,7 @@ const AccountScreen = ({navigation}: any) => {
           <Ionicons name="chevron-forward-outline" size={24} color="#A9ACD6" />
         </TouchableOpacity>
 
-        <View style={styles.twoCards}>
+        {/* <View style={styles.twoCards}>
           <View style={styles.bigCard}>
             <Ionicons name="wallet-outline" size={34} color="#262A4F" />
             <Text style={styles.bigCardTitle}>Payment details</Text>
@@ -346,7 +346,7 @@ const AccountScreen = ({navigation}: any) => {
               <Text style={styles.bigAccentLink}>Call agent</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.storyBanner}>
           <Text style={styles.storyText}>
@@ -392,10 +392,10 @@ const AccountScreen = ({navigation}: any) => {
         </View>
         */}
 
-        <TouchableOpacity style={styles.rewardsCard}>
+        {/* <TouchableOpacity style={styles.rewardsCard}>
           <Ionicons name="gift-outline" size={28} color="#262A4F" />
           <Text style={styles.rewardsText}>My rewards</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity style={styles.logoutCard} onPress={confirmLogout}>
           <Ionicons name="log-out-outline" size={28} color="#262A4F" />
@@ -443,16 +443,16 @@ const AccountScreen = ({navigation}: any) => {
                   />
                 )}
                 <View style={styles.imageButtonRow}>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.addImageButton}
                     onPress={handleAddImage}>
                     <Text style={styles.addImageText}>ADD IMAGE</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </TouchableOpacity> */}
+                  {/* <TouchableOpacity
                     style={styles.deleteImageButton}
                     onPress={handleDeleteImage}>
                     <Text style={styles.deleteImageText}>DELETE IMAGE</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
               </View>
 

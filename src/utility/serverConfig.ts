@@ -1,26 +1,179 @@
-// Central place to keep the Socket / server link used by the app
-// Edit this single constant to change the server used by both the client
-// socket helper and the WebSocket provider.
-
-// NOTE: This file intentionally keeps a single link (server URL) for the app.
-// If you need environment-specific overrides later, replace this with an env-based
-// loader or use app.json / runtime config.
-
-// Use the server base URL (without the /socket.io path) — the client sets path separately.
-// Primary server to try first. Edit this to change the first attempt.
+// src/utility/serverConfig.ts
+ 
+// ============================================================
+// 1. REST API BASE URL
+// ============================================================
+export const BASE_URL = 'https://car01.dostenterprises.com';
+ 
+// ============================================================
+// 2. WEBSOCKET CONFIGURATION
+// ============================================================
+// Primary Socket URL
 export const SOCKET_SERVER_URL = 'https://webs01.dostenterprises.com';
-
-// List of fallback server endpoints to try when the primary is unreachable.
-// Order matters — the client will try each in order until it connects.
+ 
+// Fallback URLs (Client can try these if primary fails)
 export const SOCKET_SERVER_URLS = [
-    SOCKET_SERVER_URL, // primary
-    'https://car01.dostenterprises.com:8090',
-    // Helpful local/emulator defaults for development
-    'http://192.168.1.35:3000',
-    'http://localhost:3000',
+  SOCKET_SERVER_URL,
+  'https://car01.dostenterprises.com:8090',
 ];
-
-// Default developer preference. Set to true to prefer polling transport (less likely to fail on some networks)
+ 
+// Socket preferences
 export const DEFAULT_FORCE_POLLING = false;
-
-export default SOCKET_SERVER_URL;
+ 
+// ============================================================
+// 3. API METHOD CONFIGURATION
+// ============================================================
+export const apiConfig = {
+  // ----------------------------------------------------------
+  // AUTHENTICATION
+  // ----------------------------------------------------------
+  auth: {
+    login: async (credentials: {username: string; password: string}) => {
+      try {
+        const response = await fetch(`${BASE_URL}/jwt/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(credentials),
+        });
+        return await response.text();
+      } catch (error) {
+        throw error;
+      }
+    },
+  },
+ 
+  // ----------------------------------------------------------
+  // USER & DEALER
+  // ----------------------------------------------------------
+  user: {
+    getDealerById: async (dealerId: string, token: string) => {
+      const response = await fetch(`${BASE_URL}/dealer/${dealerId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+      return await response.json();
+    },
+ 
+    getProfilePhoto: async (userId: string, token: string) => {
+      const response = await fetch(
+        `${BASE_URL}/ProfilePhoto/getbyuserid?userId=${userId}`,
+        {
+          headers: {Authorization: `Bearer ${token}`},
+        },
+      );
+      return response;
+    },
+ 
+    addProfilePhoto: async (formData: FormData, token: string) => {
+      const response = await fetch(`${BASE_URL}/ProfilePhoto/add`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      return response;
+    },
+ 
+    deleteProfilePhoto: async (userId: string, token: string) => {
+      const response = await fetch(
+        `${BASE_URL}/ProfilePhoto/deletebyuserid?userId=${userId}`,
+        {
+          method: 'DELETE',
+          headers: {Authorization: `Bearer ${token}`},
+        },
+      );
+      return response;
+    },
+  },
+ 
+  // ----------------------------------------------------------
+  // BIDDING
+  // ----------------------------------------------------------
+  bid: {
+    getLiveValue: async (bidCarId: string) => {
+      const response = await fetch(
+        `${BASE_URL}/Bid/getliveValue?bidCarId=${bidCarId}`,
+      );
+      return await response.json();
+    },
+ 
+    placeBid: async (bidCarId: string, token: string, body: any) => {
+      const response = await fetch(
+        `${BASE_URL}/Bid/placeBid?bidCarId=${bidCarId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(body),
+        },
+      );
+      return response;
+    },
+ 
+    getFinalBids: async (token: string) => {
+      const response = await fetch(`${BASE_URL}/Bid/finalBids`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.json();
+    },
+  },
+ 
+  // ----------------------------------------------------------
+  // CAR DETAILS
+  // ----------------------------------------------------------
+  car: {
+    getByBidCarId: async (bidCarId: string) => {
+      const response = await fetch(
+        `${BASE_URL}/BeadingCarController/getByBidCarId/${bidCarId}`,
+      );
+      return await response.text();
+    },
+ 
+    getByDealerId: async (dealerId: string) => {
+      const response = await fetch(
+        `${BASE_URL}/BeadingCarController/getByDealerID/${dealerId}`,
+      );
+      return await response.text();
+    },
+ 
+    getImagesByBeadingId: async (beadingCarId: string) => {
+      const response = await fetch(
+        `${BASE_URL}/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`,
+      );
+      return await response.text();
+    },
+  },
+ 
+  // ----------------------------------------------------------
+  // INSPECTION
+  // ----------------------------------------------------------
+  inspection: {
+    getReportByBeadingId: async (beadingCarId: string) => {
+      const response = await fetch(
+        `${BASE_URL}/inspectionReport/getByBeadingCar?beadingCarId=${beadingCarId}`,
+      );
+      return await response.text();
+    },
+ 
+    getSectionData: async (beadingCarId: string, docType: string) => {
+      const response = await fetch(
+        `${BASE_URL}/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
+      );
+      return await response.text();
+    },
+  },
+};
+ 

@@ -600,7 +600,7 @@ interface BidUserData {
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
-import SOCKET_SERVER_URL from './serverConfig';
+import { SOCKET_SERVER_URL } from './serverConfig';
 
 // Primary socket endpoint used by the provider. Change `src/utility/serverConfig.ts` to update this.
 const SOCKET_IO_URL = SOCKET_SERVER_URL;
