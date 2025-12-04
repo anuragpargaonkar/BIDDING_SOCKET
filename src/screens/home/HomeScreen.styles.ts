@@ -1,746 +1,981 @@
 // src/screens/HomeScreen.styles.ts
-import {StyleSheet} from 'react-native';
+
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width } = Dimensions.get('window');
+
+// Scale relative to a standard 375px screen width
+const scale = width / 375;
+
+// Responsive size
+const RS = (size: number) => Math.round(size * scale);
+
+// Responsive font
+const RF = (size: number) => Math.round(size * scale);
 
 export const styles = StyleSheet.create({
-  safeArea: {flex: 1, backgroundColor: '#262a4f'},
-  gradientBackground: {flex: 1},
-  header: {paddingHorizontal: 20, paddingTop: 15, paddingBottom: 20},
+  safeArea: { flex: 1, backgroundColor: '#262a4f' },
+  gradientBackground: { flex: 1 },
+
+  header: { paddingHorizontal: RS(20), paddingTop: RS(15), paddingBottom: RS(20) },
+
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: RS(16),
   },
-  profileSection: {flexDirection: 'row', alignItems: 'center'},
+
+  profileSection: { flexDirection: 'row', alignItems: 'center' },
+
   logoImage: {
-    width: 50,
-    height: 50,
+    width: RS(50),
+    height: RS(50),
   },
-  notificationIcon: {position: 'relative'},
+
+  notificationIcon: { position: 'relative' },
+
   notificationBadge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    top: RS(2),
+    right: RS(2),
+    width: RS(10),
+    height: RS(10),
+    borderRadius: RS(5),
     backgroundColor: '#EF4444',
-    borderWidth: 2,
+    borderWidth: RS(2),
     borderColor: '#262a4f',
   },
-  searchContainer: {flexDirection: 'row', gap: 12, width: '100%', height: 60, paddingHorizontal: 16},
+
+  searchContainer: {
+    flexDirection: 'row',
+    gap: RS(12),
+    width: '100%',
+    height: RS(60),
+    paddingHorizontal: RS(16),
+  },
+
   searchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    borderRadius: RS(16),
+    paddingHorizontal: RS(16),
+    paddingVertical: RS(12),
+    gap: RS(10),
   },
-  searchInput: {flex: 1, color: '#1F2937', fontSize: 15, fontWeight: '500'},
+
+  searchInput: {
+    flex: 1,
+    color: '#1F2937',
+    fontSize: RF(15),
+    fontWeight: '500',
+  },
+
   whiteContentArea: {
     flex: 1,
     backgroundColor: '#f8f9fc',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 20,
+    borderTopLeftRadius: RS(30),
+    borderTopRightRadius: RS(30),
+    paddingTop: RS(20),
   },
-  scrollViewContent: {flex: 1},
+
+  scrollViewContent: { flex: 1 },
+
   tabs: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 10,
-    paddingHorizontal: 20,
-    gap: 40,
+    marginVertical: RS(10),
+    paddingHorizontal: RS(20),
+    gap: RS(40),
   },
-  tabContainer: {alignItems: 'center'},
+
+  tabContainer: { alignItems: 'center' },
+
   tabText: {
-    fontSize: 18,
+    fontSize: RF(18),
     fontWeight: '700',
     color: '#9CA3AF',
     letterSpacing: 0.5,
   },
-  activeTabText: {color: '#262a4f'},
+
+  activeTabText: { color: '#262a4f' },
+
   tabCountBadge: {
     backgroundColor: '#F3F4F6',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginTop: 6,
+    paddingHorizontal: RS(10),
+    paddingVertical: RS(3),
+    borderRadius: RS(12),
+    marginTop: RS(6),
   },
-  activeTabCountBadge: {backgroundColor: '#e6e8f3'},
-  tabCount: {fontSize: 13, fontWeight: '800', color: '#6B7280'},
-  activeTabCountText: {color: '#262a4f'},
+
+  activeTabCountBadge: { backgroundColor: '#e6e8f3' },
+
+  tabCount: {
+    fontSize: RF(13),
+    fontWeight: '800',
+    color: '#6B7280',
+  },
+
+  activeTabCountText: { color: '#262a4f' },
+
   activeTabIndicator: {
-    height: 4,
-    marginTop: 8,
-    width: 50,
-    borderRadius: 2,
+    height: RS(4),
+    marginTop: RS(8),
+    width: RS(50),
+    borderRadius: RS(2),
     backgroundColor: '#a9acd6',
   },
+
   banner: {
-    marginHorizontal: 16,
-    padding: 20,
-    borderRadius: 20,
+    marginHorizontal: RS(16),
+    padding: RS(20),
+    borderRadius: RS(20),
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#e6e8f3',
     shadowColor: '#262a4f',
-    shadowOffset: {width: 0, height: 8},
+    shadowOffset: { width: 0, height: RS(8) },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: RS(12),
     elevation: 8,
   },
+
   newLaunchBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginBottom: 10,
+    paddingHorizontal: RS(12),
+    paddingVertical: RS(6),
+    borderRadius: RS(8),
+    marginBottom: RS(10),
     backgroundColor: '#262a4f',
   },
+
   bannerTitle: {
-    fontSize: 13,
+    fontSize: RF(13),
     fontWeight: '800',
     color: '#a9acd6',
     letterSpacing: 0.5,
   },
+
   bannerDesc: {
-    fontSize: 13,
+    fontSize: RF(13),
     color: '#4B5563',
-    marginVertical: 8,
-    lineHeight: 18,
+    marginVertical: RS(8),
+    lineHeight: RF(18),
     fontWeight: '500',
   },
+
   exploreBtn: {
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    marginTop: 8,
+    borderRadius: RS(12),
+    paddingHorizontal: RS(18),
+    paddingVertical: RS(10),
+    marginTop: RS(8),
     alignSelf: 'flex-start',
     backgroundColor: '#a9acd6',
     shadowColor: '#a9acd6',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: RS(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: RS(8),
     elevation: 4,
   },
-  exploreText: {color: '#262a4f', fontSize: 14, fontWeight: '700'},
-  bannerImage: {width: 110, height: 100, resizeMode: 'contain', marginLeft: 10},
+
+  exploreText: {
+    color: '#262a4f',
+    fontSize: RF(14),
+    fontWeight: '700',
+  },
+
+  bannerImage: {
+    width: RS(110),
+    height: RS(100),
+    resizeMode: 'contain',
+    marginLeft: RS(10),
+  },
+
   liveCarsHeaderContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 16,
+    paddingHorizontal: RS(20),
+    marginTop: RS(24),
+    marginBottom: RS(16),
   },
+
   liveCarsHeader: {
-    fontSize: 24,
+    fontSize: RF(24),
     fontWeight: '800',
     color: '#1F2937',
     letterSpacing: -0.5,
   },
+
   liveCarsSubtext: {
-    fontSize: 13,
+    fontSize: RF(13),
     color: '#6B7280',
-    marginTop: 2,
+    marginTop: RS(2),
     fontWeight: '500',
   },
+
   refreshGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: RS(40),
+    height: RS(40),
+    borderRadius: RS(20),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#a9acd6',
     shadowColor: '#a9acd6',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: RS(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: RS(8),
     elevation: 4,
   },
+
   card: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    borderRadius: RS(20),
+    marginHorizontal: RS(16),
+    marginBottom: RS(16),
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: {width: 0, height: 8},
+    shadowRadius: RS(16),
+    shadowOffset: { width: 0, height: RS(8) },
     elevation: 8,
   },
-  carImage: {width: '100%', height: 200, resizeMode: 'cover'},
+
+  carImage: {
+    width: '100%',
+    height: RS(200),
+    resizeMode: 'cover',
+  },
+
   heartIcon: {
     position: 'absolute',
-    top: 14,
-    right: 14,
+    top: RS(14),
+    right: RS(14),
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 10,
-    borderRadius: 24,
+    padding: RS(10),
+    borderRadius: RS(24),
   },
+
   scrapBadge: {
     position: 'absolute',
-    top: 14,
-    left: 14,
+    top: RS(14),
+    left: RS(14),
     backgroundColor: '#EF4444',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: RS(14),
+    paddingVertical: RS(8),
+    borderRadius: RS(12),
   },
-  scrapText: {color: '#fff', fontWeight: '800', fontSize: 11},
-  cardDetails: {padding: 18},
+
+  scrapText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: RF(11),
+  },
+
+  cardDetails: { padding: RS(18) },
+
   carName: {
-    fontSize: 19,
+    fontSize: RF(19),
     fontWeight: '800',
     color: '#1F2937',
-    lineHeight: 26,
+    lineHeight: RF(26),
     letterSpacing: -0.3,
   },
-  locationRow: {flexDirection: 'row', alignItems: 'center', gap: 4},
+
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: RS(4) },
+
   locationTextSmall: {
-    fontSize: 13,
+    fontSize: RF(13),
     color: '#6B7280',
     fontWeight: '600',
   },
-  carInfo: {fontSize: 13, color: '#9CA3AF', marginTop: 6, fontWeight: '500'},
+
+  carInfo: {
+    fontSize: RF(13),
+    color: '#9CA3AF',
+    marginTop: RS(6),
+    fontWeight: '500',
+  },
+
   bidSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: RS(16),
+    paddingTop: RS(16),
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
+
   highestBid: {
-    fontSize: 12,
+    fontSize: RF(12),
     color: '#9CA3AF',
-    marginBottom: 6,
+    marginBottom: RS(6),
     fontWeight: '600',
   },
+
   bidAmount: {
-    fontSize: 22,
+    fontSize: RF(22),
     fontWeight: '800',
     color: '#262a4f',
     letterSpacing: -0.5,
   },
-  timerContainer: {alignItems: 'flex-end'},
+
+  timerContainer: { alignItems: 'flex-end' },
+
   timeRemaining: {
-    fontSize: 11,
+    fontSize: RF(11),
     color: '#9CA3AF',
-    marginBottom: 6,
+    marginBottom: RS(6),
     fontWeight: '600',
   },
+
   timerBox: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: RS(12),
+    paddingVertical: RS(8),
+    borderRadius: RS(10),
     backgroundColor: '#262a4f',
-    shadowColor: '#262a4f',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
+
   timerText: {
     color: '#a9acd6',
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: RF(14),
     letterSpacing: 0.5,
   },
+
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 16,
+    paddingVertical: RS(16),
+    borderRadius: RS(16),
+    marginTop: RS(16),
     backgroundColor: '#262a4f',
     shadowColor: '#262a4f',
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
     elevation: 6,
   },
+
   viewButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: RF(16),
     fontWeight: '800',
     letterSpacing: 0.5,
   },
-  loadingContainer: {alignItems: 'center', marginTop: 80},
+
+  loadingContainer: { alignItems: 'center', marginTop: RS(80) },
+
   loadingText: {
-    marginTop: 16,
+    marginTop: RS(16),
     color: '#a9acd6',
-    fontSize: 16,
+    fontSize: RF(16),
     fontWeight: '600',
   },
-  emptyContainer: {alignItems: 'center', marginTop: 80},
-  emptyText: {fontSize: 20, fontWeight: '800', color: '#6B7280', marginTop: 16},
-  retryButton: {
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginTop: 20,
-    backgroundColor: '#a9acd6',
-    shadowColor: '#a9acd6',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+
+  emptyContainer: { alignItems: 'center', marginTop: RS(80) },
+
+  emptyText: {
+    fontSize: RF(20),
+    fontWeight: '800',
+    color: '#6B7280',
+    marginTop: RS(16),
   },
-  retryText: {color: '#262a4f', fontWeight: '800', fontSize: 15},
+
+  retryButton: {
+    paddingHorizontal: RS(28),
+    paddingVertical: RS(14),
+    borderRadius: RS(14),
+    marginTop: RS(20),
+    backgroundColor: '#a9acd6',
+  },
+
+  retryText: {
+    color: '#262a4f',
+    fontWeight: '800',
+    fontSize: RF(15),
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(38, 42, 79, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: RS(20),
   },
+
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 28,
+    borderRadius: RS(28),
     width: '100%',
-    maxWidth: 420,
+    maxWidth: RS(420),
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 20},
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 20,
+    alignSelf: 'center',
   },
-  modalHeader: {padding: 24, alignItems: 'center', backgroundColor: '#262a4f'},
+
+  modalHeader: { padding: RS(24), alignItems: 'center', backgroundColor: '#262a4f' },
+
   modalTitle: {
-    fontSize: 24,
+    fontSize: RF(24),
     fontWeight: '800',
     color: '#a9acd6',
     letterSpacing: -0.5,
   },
-  amountContainer: {padding: 24, paddingTop: 16},
+
+  amountContainer: { padding: RS(24), paddingTop: RS(16) },
+
   amountLabel: {
-    fontSize: 15,
+    fontSize: RF(15),
     color: '#6B7280',
-    marginBottom: 12,
+    marginBottom: RS(12),
     fontWeight: '600',
   },
+
+  // FIXED ₹ OVERLAPPING PROBLEM (IMPORTANT)
+  bidInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: RS(12),
+  },
+
+  rupeeSymbol: {
+    fontSize: RF(24),
+    fontWeight: '800',
+    color: '#262a4f',
+    marginRight: RS(8),
+  },
+
   bidInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: RS(2),
     borderColor: '#e6e8f3',
-    borderRadius: 16,
+    borderRadius: RS(30),
     overflow: 'hidden',
   },
+
+  bidInput: {
+    flex: 1,
+    fontSize: RF(22),
+    fontWeight: '800',
+    paddingVertical: RS(12),
+    color: '#1F2937',
+    textAlign: 'left',
+  },
+
   adjustButtonMinus: {
-    width: 60,
-    height: 60,
+    width: RS(60),
+    height: RS(60),
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#EF4444',
   },
+
   adjustButtonPlus: {
-    width: 60,
-    height: 60,
+    width: RS(60),
+    height: RS(60),
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#a9acd6',
   },
-  adjustButtonText: {color: '#fff', fontSize: 28, fontWeight: '700'},
-  bidInput: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    fontSize: 24,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: '#1F2937',
-  },
-  modalActions: {flexDirection: 'row', padding: 24, paddingTop: 0, gap: 12},
+
+  modalActions: { flexDirection: 'row', padding: RS(24), paddingTop: 0, gap: RS(12) },
+
   cancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: RS(16),
+    borderRadius: RS(14),
     backgroundColor: '#fff',
-    borderWidth: 2,
+    borderWidth: RS(2),
     borderColor: '#e6e8f3',
     alignItems: 'center',
   },
+
   cancelButtonText: {
     color: '#262a4f',
-    fontSize: 15,
+    fontSize: RF(15),
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
+
   confirmButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: RS(16),
+    borderRadius: RS(14),
     alignItems: 'center',
     backgroundColor: '#a9acd6',
-    shadowColor: '#a9acd6',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-    width: '110%',
   },
+
   confirmButtonText: {
     color: '#262a4f',
-    fontSize: 15,
+    fontSize: RF(15),
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
-  warningFixedContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
+
+  // SUCCESS MODAL
+
+  successModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: RS(20),
+    padding: RS(30),
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#EF4444',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: -8},
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 12,
-    height: 70,
+    width: '85%',
   },
-  warningIconText: {flexDirection: 'row', alignItems: 'center', flex: 1},
-  warningTitle: {
+
+  successTitle: {
+    fontSize: RF(22),
+    fontWeight: 'bold',
+    color: '#262a4f',
+    marginTop: RS(20),
+    textAlign: 'center',
+  },
+
+  successAmount: {
+    fontSize: RF(32),
+    fontWeight: 'bold',
+    color: '#10B981',
+    marginVertical: RS(15),
+  },
+
+  successMessage: {
+    fontSize: RF(14),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: RS(20),
+  },
+
+  successButton: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: RS(50),
+    paddingVertical: RS(14),
+    borderRadius: RS(25),
+    marginTop: RS(10),
+    width: '100%',
+    alignItems: 'center',
+  },
+
+  successButtonText: {
     color: '#fff',
-    fontSize: 15,
+    fontWeight: '600',
+    fontSize: RF(16),
+  },
+
+  modalCloseButton: {
+    position: 'absolute',
+    top: RS(20),
+    right: RS(20),
+  },
+
+  currentBidInfo: {
+    padding: RS(24),
+    paddingBottom: RS(16),
+    alignItems: 'center',
+    backgroundColor: '#f8f9fc',
+  },
+
+  currentBidLabel: {
+    fontSize: RF(14),
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: RS(4),
+  },
+
+  currentBidAmount: {
+    fontSize: RF(28),
     fontWeight: '800',
-    letterSpacing: 0.3,
+    color: '#262a4f',
   },
-  warningText: {
-    color: '#fff',
-    fontSize: 12,
+
+  bidIncrementHint: {
+    fontSize: RF(13),
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: RS(12),
     fontWeight: '500',
-    marginTop: 2,
-    opacity: 0.95,
   },
-  closeWarningButton: {
-    marginLeft: 12,
-    padding: 4,
+
+  quickBidOptions: {
+    padding: RS(24),
+    paddingTop: 0,
   },
-  notificationBanner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    zIndex: 9999,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  notificationText: {
-    color: '#fff',
-    fontSize: 14,
+
+  quickBidLabel: {
+    fontSize: RF(14),
     fontWeight: '700',
-    flex: 1,
+    color: '#262a4f',
+    marginBottom: RS(12),
   },
+
+  quickBidButtonsRow: {
+    flexDirection: 'row',
+    gap: RS(8),
+    justifyContent: 'space-between',
+  },
+
+  quickBidButton: {
+    flex: 1,
+    paddingVertical: RS(12),
+    backgroundColor: '#e6e8f3',
+    borderRadius: RS(12),
+    alignItems: 'center',
+  },
+
+  quickBidButtonText: {
+    fontSize: RF(13),
+    fontWeight: '700',
+    color: '#262a4f',
+  },
+
+  confirmButtonDisabled: {
+    backgroundColor: '#d1d5db',
+    opacity: 0.6,
+  },
+
+  successIconContainer: {
+    width: RS(100),
+    height: RS(100),
+    borderRadius: RS(50),
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: RS(16),
+  },
+
+  successAmountContainer: {
+    alignItems: 'center',
+    marginVertical: RS(10),
+  },
+
+  successAmountLabel: {
+    fontSize: RF(14),
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: RS(4),
+  },
+
+  successDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    width: '100%',
+    marginVertical: RS(20),
+  },
+
+  viewAllBidsButton: {
+    marginTop: RS(12),
+    paddingVertical: RS(12),
+    alignItems: 'center',
+  },
+
+  viewAllBidsText: {
+    color: '#a9acd6',
+    fontSize: RF(14),
+    fontWeight: '600',
+  },
+
   detailsModalContainer: {
     flex: 1,
     backgroundColor: '#fff',
   },
+
   detailsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: RS(20),
+    paddingVertical: RS(16),
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     elevation: 3,
   },
+
   backButton: {
-    padding: 8,
+    padding: RS(8),
   },
+
   detailsHeaderTitle: {
-    fontSize: 18,
+    fontSize: RF(18),
     fontWeight: '800',
     color: '#262a4f',
     letterSpacing: -0.3,
-    marginRight: 115,
+    marginRight: RS(115),
   },
-  headerHeartIcon: {
-    padding: 8,
-  },
-  detailsScrollView: {
-    flex: 1,
-  },
+
+  detailsScrollView: { flex: 1 },
+
   detailsImageContainer: {
     width: '100%',
-    height: 280,
+    height: RS(280),
     position: 'relative',
     backgroundColor: '#f8f9fc',
   },
+
   detailsCarImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+
   detailsScrapBadge: {
     position: 'absolute',
-    top: 20,
-    left: 20,
+    top: RS(20),
+    left: RS(20),
     backgroundColor: '#EF4444',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: RS(16),
+    paddingVertical: RS(10),
+    borderRadius: RS(12),
   },
+
   detailsTitleSection: {
-    padding: 20,
+    padding: RS(20),
     backgroundColor: '#fff',
   },
+
   detailsCarTitle: {
-    fontSize: 26,
+    fontSize: RF(26),
     fontWeight: '800',
     color: '#1F2937',
     letterSpacing: -0.5,
-    marginBottom: 8,
+    marginBottom: RS(8),
   },
+
   detailsCarSubtitle: {
-    fontSize: 16,
+    fontSize: RF(16),
     fontWeight: '600',
     color: '#6B7280',
-    marginBottom: 16,
+    marginBottom: RS(16),
   },
+
   quickInfoBadges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
+    gap: RS(10),
+    marginBottom: RS(16),
   },
+
   infoBadge: {
     backgroundColor: '#f8f9fc',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: RS(14),
+    paddingVertical: RS(8),
+    borderRadius: RS(10),
     borderWidth: 1,
     borderColor: '#e6e8f3',
   },
+
   infoBadgeText: {
-    fontSize: 13,
+    fontSize: RF(13),
     fontWeight: '700',
     color: '#262a4f',
   },
-  locationTestDriveRow: {
-    marginBottom: 12,
-  },
+
   locationInfoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: RS(8),
   },
+
   locationInfoText: {
-    fontSize: 14,
+    fontSize: RF(14),
     fontWeight: '600',
     color: '#1F2937',
   },
+
   testDriveAvailable: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
+    gap: RS(8),
+    marginBottom: RS(16),
   },
+
   testDriveText: {
-    fontSize: 14,
+    fontSize: RF(14),
     fontWeight: '600',
     color: '#10B981',
   },
+
   inspectionReportButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    gap: RS(8),
+    paddingVertical: RS(12),
+    paddingHorizontal: RS(16),
     backgroundColor: '#f8f9fc',
-    borderRadius: 12,
+    borderRadius: RS(12),
     borderWidth: 1,
     borderColor: '#e6e8f3',
   },
+
   inspectionReportText: {
-    fontSize: 14,
+    fontSize: RF(14),
     fontWeight: '700',
     color: '#a9acd6',
   },
+
   priceTimerSection: {
-    padding: 20,
+    padding: RS(20),
     backgroundColor: '#fff',
-    marginTop: 8,
+    marginTop: RS(8),
   },
+
   priceBox: {
     backgroundColor: '#f8f9fc',
-    padding: 20,
-    borderRadius: 16,
+    padding: RS(20),
+    borderRadius: RS(16),
     borderWidth: 2,
     borderColor: '#e6e8f3',
     alignItems: 'center',
   },
+
   priceLabel: {
-    fontSize: 22,
+    fontSize: RF(22),
     fontWeight: '800',
     color: '#262a4f',
-    letterSpacing: -0.5,
-    marginBottom: 4,
+    marginBottom: RS(4),
   },
+
   priceSubLabel: {
-    fontSize: 11,
+    fontSize: RF(11),
     fontWeight: '600',
     color: '#9CA3AF',
-    letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: RS(12),
   },
+
   timerLabelBig: {
-    fontSize: 32,
+    fontSize: RF(32),
     fontWeight: '800',
     color: '#a9acd6',
     letterSpacing: 1,
   },
+
   knowYourCarSection: {
-    padding: 20,
+    padding: RS(20),
     backgroundColor: '#fff',
-    marginTop: 8,
+    marginTop: RS(8),
   },
+
   sectionTitle: {
-    fontSize: 20,
+    fontSize: RF(20),
     fontWeight: '800',
     color: '#1F2937',
-    letterSpacing: -0.3,
-    marginBottom: 20,
+    marginBottom: RS(20),
   },
+
   detailsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+
   detailItem: {
     width: '31%',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: RS(24),
   },
+
   detailIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: RS(56),
+    height: RS(56),
+    borderRadius: RS(28),
     backgroundColor: '#f8f9fc',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
-    borderWidth: 2,
+    marginBottom: RS(10),
+    borderWidth: RS(2),
     borderColor: '#e6e8f3',
   },
+
   detailLabel: {
-    fontSize: 11,
+    fontSize: RF(11),
     fontWeight: '600',
     color: '#9CA3AF',
-    marginBottom: 4,
-    textAlign: 'center',
+    marginBottom: RS(4),
   },
+
   detailValue: {
-    fontSize: 13,
+    fontSize: RF(13),
     fontWeight: '800',
     color: '#1F2937',
-    textAlign: 'center',
   },
+
   topFeaturesSection: {
-    padding: 20,
+    padding: RS(20),
     backgroundColor: '#fff',
-    marginTop: 8,
+    marginTop: RS(8),
   },
+
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
+
   featureItem: {
     width: '31%',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: RS(24),
     backgroundColor: '#f8f9fc',
-    padding: 16,
-    borderRadius: 12,
+    padding: RS(16),
+    borderRadius: RS(12),
     borderWidth: 1,
     borderColor: '#e6e8f3',
   },
+
   featureText: {
-    fontSize: 11,
+    fontSize: RF(11),
     fontWeight: '700',
     color: '#1F2937',
-    marginTop: 8,
+    marginTop: RS(8),
     textAlign: 'center',
   },
+
   bottomActionBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     flexDirection: 'row',
-    padding: 16,
+    padding: RS(16),
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: -4},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    gap: RS(12),
     elevation: 10,
   },
+
   placeBidButtonLarge: {
     flex: 1,
     backgroundColor: '#10B981',
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: RS(16),
+    borderRadius: RS(14),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
+
   placeBidButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: RF(16),
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
+
   interestedButton: {
     flex: 1,
     backgroundColor: '#FCD34D',
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: RS(16),
+    borderRadius: RS(14),
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FCD34D',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
+
   interestedButtonText: {
     color: '#1F2937',
-    fontSize: 16,
+    fontSize: RF(16),
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
+
+  locationTestDriveRow: {
+  marginBottom: RS(12),
+},
+
 });

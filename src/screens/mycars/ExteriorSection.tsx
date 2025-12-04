@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   content: {
-    padding: 16,
+    padding: 15,
   },
   centerContainer: {
     flex: 1,
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 24,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 20,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 0,    // <<< UPDATED
     marginBottom: 20,
   },
   card: {
@@ -762,10 +762,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    marginBottom: 500,
+    marginBottom: 20,
   },
   gridContainer: {
-    gap: 20,
+    gap: 10,
   },
   itemContainer: {
     marginBottom: 16,

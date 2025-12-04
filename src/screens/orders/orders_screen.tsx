@@ -92,7 +92,7 @@ const OrderScreen: React.FC = () => {
               style={styles.homeButton}
               onPress={() => {
                 try {
-                  navigation.navigate('Home');
+                  navigation.navigate('HomeTab');
                 } catch {
                   navigation.navigate('Main', { screen: 'Home' });
                 }

@@ -24,7 +24,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import {useWishlist} from '../../context/WishlistContext';
 import {styles} from './HomeScreen.styles';
-// IMPORT BASE_URL FROM YOUR CONFIG
 import {BASE_URL} from '../../utility/serverConfig';
 
 interface Car {
@@ -101,14 +100,16 @@ const HomeScreen: React.FC = () => {
   const [carAuctionTimes, setCarAuctionTimes] = useState<{
     [key: string]: {start: number; end: number};
   }>({});
-  const [countdownTimers, setCountdownTimers] = useState<{
-    [key: string]: string;
-  }>({});
+  const [countdownTimers, setCountdownTimers] = useState<{[key: string]: string}>(
+    {},
+  );
   const [filteredLiveCars, setFilteredLiveCars] = useState<Car[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [carDetailsModalVisible, setCarDetailsModalVisible] = useState(false);
-  const [selectedCarForDetails, setSelectedCarForDetails] =
-    useState<Car | null>(null);
+  const [selectedCarForDetails, setSelectedCarForDetails] = useState<Car | null>(
+    null,
+  );
   const [selectedCar, setSelectedCar] = useState<{
     bidCarId: string;
     price: number;
@@ -118,21 +119,18 @@ const HomeScreen: React.FC = () => {
   );
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showLowBalanceWarning, setShowLowBalanceWarning] = useState(true);
-
   const [bidModalPriceCache, setBidModalPriceCache] = useState<{
     [bidCarId: string]: number;
   }>({});
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successBidAmount, setSuccessBidAmount] = useState(0);
 
   const bidInitializedRef = useRef<string | null>(null);
   const countdownInterval = useRef<NodeJS.Timeout | null>(null);
   const notificationAnim = useRef(new Animated.Value(-100)).current;
   const hasRequestedLiveCarsRef = useRef(false);
   const prevFilteredLiveCarsLengthRef = useRef(0);
-  
-  // Ref for polling to access latest cars without resetting interval
   const filteredLiveCarsRef = useRef<Car[]>([]);
-
-  // NEW: fetch lock set to prevent duplicate concurrent fetches
   const fetchingRef = useRef<Set<string>>(new Set());
 
   const route = useRoute<HomeScreenRouteProp>();
@@ -145,80 +143,6 @@ const HomeScreen: React.FC = () => {
     connectionError,
     connectionStatus,
   } = useWebSocket();
-
-  // === NOTIFICATION SYSTEM ===
-  /* const showNotification = useCallback(
-    (car: Car, type: 'bid' | 'outbid' | 'won' | 'time') => {
-      const carName = `${car.make || 'Toyota'} ${car.model || 'Innova'} ${
-        car.variant || '2.8 ZX'
-      }`;
-      let message = '';
-      switch (type) {
-        case 'bid':
-          message = `You placed a bid on ${carName} at ₹${(
-            livePrices[car.id]?.price || 0
-          ).toLocaleString()}`;
-          break;
-        case 'outbid':
-          message = `You've been outbid on ${carName}! New bid: ₹${(
-            (livePrices[car.id]?.price || 0) + 5000
-          ).toLocaleString()}`;
-          break;
-        case 'won':
-          message = `Congratulations! You won ${carName} for ₹${(
-            livePrices[car.id]?.price || 0
-          ).toLocaleString()}`;
-          break;
-        case 'time':
-          message = `Only 5 minutes left for ${carName}!`;
-          break;
-      }
-      const newNotif: Notification = {
-        id: `${car.id}-${Date.now()}`,
-        carId: car.id,
-        message,
-        type,
-        timestamp: Date.now(),
-      };
-      setNotifications(prev => [newNotif, ...prev.slice(0, 4)]);
-      notificationAnim.setValue(-100);
-      Animated.timing(notificationAnim, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-      setTimeout(() => {
-        Animated.timing(notificationAnim, {
-          toValue: -100,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setNotifications(prev => prev.filter(n => n.id !== newNotif.id));
-        });
-      }, 4000);
-      // }, [livePrices, notificationAnim]);
-    },
-    [livePrices, notificationAnim],
-  );
-
-  const handleNotificationClick = () => {
-    if (filteredLiveCars.length === 0) {
-      Alert.alert('No Cars', 'No live cars to show demo notifications.');
-      return;
-    }
-    const randomCar =
-      filteredLiveCars[Math.floor(Math.random() * filteredLiveCars.length)];
-    const types: Array<'bid' | 'outbid' | 'won' | 'time'> = [
-      'bid',
-      'outbid',
-      'time',
-      'won',
-    ];
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    showNotification(randomCar, randomType);
-  };
-  */
 
   // === HELPER FUNCTIONS ===
   const getCurrentDateTimeForAPI = useCallback((): string => {
@@ -258,30 +182,90 @@ const HomeScreen: React.FC = () => {
     )}:${String(seconds).padStart(2, '0')}`;
   }, []);
 
+  // Search filter function
+  const filterCarsBySearch = useCallback(
+    (cars: Car[], query: string) => {
+      if (!query.trim()) return cars;
+
+      const lowerQuery = query.toLowerCase();
+      return cars.filter(car => {
+        const carId = car.id || '';
+        const bidId = car.bidCarId || carId;
+        const carDetails = carDetailsData[bidId] || carDetailsData[carId];
+
+        const searchFields = [
+          car.make,
+          car.model,
+          car.variant,
+          car.city,
+          car.rtoCode,
+          car.fuelType,
+          carDetails?.brand,
+          carDetails?.model,
+          carDetails?.variant,
+          carDetails?.city,
+          carDetails?.registration,
+        ].filter(Boolean);
+
+        return searchFields.some(field =>
+          String(field).toLowerCase().includes(lowerQuery),
+        );
+      });
+    },
+    [carDetailsData],
+  );
+
   // Update ref whenever state changes
   useEffect(() => {
     filteredLiveCarsRef.current = filteredLiveCars;
   }, [filteredLiveCars]);
 
-  // === IMMEDIATE CAR DISPLAY (FALLBACK) ===
+  // === IMMEDIATE CAR DISPLAY (UPDATED FIX) ===
   useEffect(() => {
-    // Set filteredLiveCars immediately when liveCars changes, but don't clear on empty
     if (liveCars.length > 0) {
-      setFilteredLiveCars(liveCars);
+      const now = Date.now();
+      
+      // 1. Filter out expired cars immediately using date logic
+      const activeCars = liveCars.filter(car => {
+        if (!car.id) return false;
+        
+        let endTime;
+        // Use cached time if available, otherwise calculate it
+        if (carAuctionTimes[car.id]) {
+          endTime = carAuctionTimes[car.id].end;
+        } else {
+           const startTime =
+            parseDateTime(car.auctionStartTime) ||
+            parseDateTime(car.startTime) ||
+            parseDateTime(car.createdAt) ||
+            now;
+            
+           endTime =
+            parseDateTime(car.auctionEndTime) ||
+            parseDateTime(car.endTime) ||
+            startTime + AUCTION_DURATION_MS;
+        }
+        
+        // Only return true if time is remaining
+        return endTime > now;
+      });
 
-      // ✅ NEW: Sync WebSocket bid updates to livePrices state instantly
-      // This ensures that when a socket update comes in, the pricing logic everywhere (Modal, Card) sees it
+      // 2. Apply search filter on the ACTIVE cars only
+      const filtered = filterCarsBySearch(activeCars, searchQuery);
+      setFilteredLiveCars(filtered);
+
+      // 3. Price update logic
       setLivePrices(prev => {
         const next = {...prev};
         let changed = false;
+        // We iterate over the ORIGINAL liveCars to ensure we have prices for everything,
+        // but we only display filtered ones.
         liveCars.forEach(car => {
           const id = car.id;
           const bidId = car.bidCarId;
           const currentBid = car.currentBid || 0;
 
-          // Update if socket has a newer/higher price than what we have in cache
           if (currentBid > 0) {
-            // Update for main ID
             if (!next[id] || currentBid > next[id].price) {
               next[id] = {
                 ...(next[id] || {}),
@@ -290,7 +274,6 @@ const HomeScreen: React.FC = () => {
               };
               changed = true;
             }
-            // Update for bidId if it exists and is different
             if (
               bidId &&
               bidId !== id &&
@@ -307,36 +290,33 @@ const HomeScreen: React.FC = () => {
         });
         return changed ? next : prev;
       });
-      
-      // ✅ Trigger an immediate refresh of prices from API to be safe
-      // This ensures if socket data was slightly stale, we correct it instantly
+
       setTimeout(() => {
-         const currentCars = filteredLiveCarsRef.current;
-         if (currentCars.length > 0) {
-            currentCars.forEach(car => {
-               if (car.id) fetchLivePrice(car.id);
-            });
-         }
+        const currentCars = filteredLiveCarsRef.current;
+        if (currentCars.length > 0) {
+          currentCars.forEach(car => {
+            if (car.id) fetchLivePrice(car.id);
+          });
+        }
       }, 500);
     }
-  }, [liveCars]);
+  }, [liveCars, searchQuery, filterCarsBySearch, carAuctionTimes]);
 
   // === AUTOMATIC PRICE POLLING (3 Seconds) ===
   useEffect(() => {
     const interval = setInterval(() => {
       const currentCars = filteredLiveCarsRef.current;
       if (currentCars.length > 0) {
-        // Fetch fresh prices for all visible cars
         currentCars.forEach(car => {
           if (car.id) {
             fetchLivePrice(car.id);
           }
         });
       }
-    }, 3000); // Check every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, []); // Run once on mount
+  }, []);
 
   // === AUCTION TIME LOGIC ===
   useEffect(() => {
@@ -357,12 +337,6 @@ const HomeScreen: React.FC = () => {
           parseDateTime(car.endTime) ||
           startTime + AUCTION_DURATION_MS;
 
-        // Ensure endTime is always in the future
-        if (endTime <= now) {
-          endTime = now + AUCTION_DURATION_MS; // Set to 30 minutes from now
-          startTime = now;
-        }
-
         newAuctionTimes[car.id] = {start: startTime, end: endTime};
         hasNewCars = true;
       }
@@ -370,7 +344,7 @@ const HomeScreen: React.FC = () => {
     if (hasNewCars) {
       setCarAuctionTimes(newAuctionTimes);
     }
-  }, [liveCars, parseDateTime]);
+  }, [liveCars, parseDateTime, carAuctionTimes]);
 
   useEffect(() => {
     if (Object.keys(carAuctionTimes).length === 0) {
@@ -382,36 +356,72 @@ const HomeScreen: React.FC = () => {
       const newTimers: {[key: string]: string} = {};
       const activeCars: Car[] = [];
       const expiredCarIds: string[] = [];
+
       liveCars.forEach(car => {
         if (!car.id) {
           return;
         }
         const auctionTime = carAuctionTimes[car.id];
         if (!auctionTime) {
-          // Keep cars visible even if they don't have auction times set yet
-          activeCars.push(car);
-          newTimers[car.id] = '00:30:00'; // Default timer
+          // If no auction time found, check if we should add it (newly added)
+          const hasTimer = countdownTimers[car.id];
+          if (!hasTimer) {
+             // Logic to add default timer if needed, or skip
+             // For strict filtering, we might want to skip pushing to activeCars if no time exists
+             activeCars.push(car);
+             newTimers[car.id] = '00:30:00';
+          }
           return;
         }
         const remainingMs = auctionTime.end - now;
+        
+        // STRICT CHECK: Only add to activeCars if time > 0
         if (remainingMs > 0) {
           newTimers[car.id] = formatCountdown(remainingMs);
           activeCars.push(car);
         } else {
+          // Car auction ended - add to expired list
           expiredCarIds.push(car.id);
         }
       });
+
       setCountdownTimers(newTimers);
-      setFilteredLiveCars(activeCars);
+
+      // Apply search filter to active cars
+      const filtered = filterCarsBySearch(activeCars, searchQuery);
+      setFilteredLiveCars(filtered);
+
       if (expiredCarIds.length > 0) {
+        // Clean up all expired car data
         setCarAuctionTimes(prev => {
           const updated = {...prev};
-          const updatedLivePrices = {...livePrices}; // Also cleanup old price data
           expiredCarIds.forEach(id => {
             delete updated[id];
-            delete updatedLivePrices[id];
           });
-          setLivePrices(updatedLivePrices);
+          return updated;
+        });
+
+        setLivePrices(prev => {
+          const updated = {...prev};
+          expiredCarIds.forEach(id => {
+            delete updated[id];
+          });
+          return updated;
+        });
+
+        setCarImageData(prev => {
+          const updated = {...prev};
+          expiredCarIds.forEach(id => {
+            delete updated[id];
+          });
+          return updated;
+        });
+
+        setCarDetailsData(prev => {
+          const updated = {...prev};
+          expiredCarIds.forEach(id => {
+            delete updated[id];
+          });
           return updated;
         });
       }
@@ -419,7 +429,14 @@ const HomeScreen: React.FC = () => {
     return () => {
       if (countdownInterval.current) clearInterval(countdownInterval.current);
     };
-  }, [liveCars, carAuctionTimes, formatCountdown]);
+  }, [
+    liveCars,
+    carAuctionTimes,
+    formatCountdown,
+    searchQuery,
+    filterCarsBySearch,
+    countdownTimers,
+  ]);
 
   // === AUTH & WEBSOCKET ===
   useEffect(() => {
@@ -449,7 +466,6 @@ const HomeScreen: React.FC = () => {
       connectWebSocket();
     }
   }, [connectionStatus]);
-  // }, []);
 
   useEffect(() => {
     if (connectionStatus === 'connected' || connectionStatus === 'error') {
@@ -457,18 +473,15 @@ const HomeScreen: React.FC = () => {
     } else if (connectionStatus === 'connecting') {
       setIsLoading(true);
     }
-    // }, [connectionStatus]);
-  }, []);
+  }, [connectionStatus]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
       if (isConnected) {
         getLiveCars();
-        // Also force a price update
         refreshAllCarPrices();
-      }
-      else connectWebSocket();
+      } else connectWebSocket();
     } catch (error) {
     } finally {
       setTimeout(() => setRefreshing(false), 2000);
@@ -485,7 +498,6 @@ const HomeScreen: React.FC = () => {
     bidCarId: string,
   ): Promise<LivePriceData | null> => {
     try {
-      // UPDATED: Use BASE_URL
       const livePriceUrl = `${BASE_URL}/Bid/getliveValue?bidCarId=${bidCarId}`;
       const response = await fetch(livePriceUrl);
       const data = await response.json();
@@ -517,16 +529,13 @@ const HomeScreen: React.FC = () => {
     beadingCarId: string,
     bidCarId: string,
   ) => {
-    // NEW: prevent concurrent duplicate fetches for same car
     const key = `${beadingCarId}-${bidCarId}`;
     if (fetchingRef.current.has(key)) {
-      // already fetching this car
       return;
     }
     fetchingRef.current.add(key);
 
     try {
-      // UPDATED: Use BASE_URL
       const imageUrl = `${BASE_URL}/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`;
       const imageResponse = await fetch(imageUrl);
       const imageText = await imageResponse.text();
@@ -548,7 +557,6 @@ const HomeScreen: React.FC = () => {
             item.subtype?.toLowerCase() === 'coverimage') &&
           String(item.beadingCarId) === String(beadingCarId),
       );
-      // UPDATED: Use BASE_URL
       const carIdUrl = `${BASE_URL}/BeadingCarController/getByBidCarId/${bidCarId}`;
       const carIdResponse = await fetch(carIdUrl);
       const carIdText = await carIdResponse.text();
@@ -563,39 +571,27 @@ const HomeScreen: React.FC = () => {
       if (carIdData) {
         setCarDetailsData(prev => ({...prev, [bidCarId]: carIdData || {}}));
       }
-      // Fetch live price only if not already cached
       if (!livePrices[bidCarId]) {
         fetchLivePrice(bidCarId);
       }
     } catch (error: any) {
-      // optional: set some error state / logging
       console.error('Error fetching car image/details', error);
     } finally {
-      // release lock
       fetchingRef.current.delete(key);
     }
   };
 
   const triggerFetchCarData = () => {
-    console.log('triggerFetchCarData called1');
-    console.log('filteredLiveCars:', filteredLiveCars); // Check content here
     filteredLiveCars.forEach(car => {
       const beadingId = car.beadingCarId || car.id;
       const bidId = car.bidCarId || car.id;
-      console.log(
-        `2.Checking car - Beading ID: ${beadingId}, Bid ID: ${bidId}`,
-      );
       if (!carDetailsData[bidId] || !carImageData[beadingId]) {
-        console.log(
-          `3.Fetching data for car - Beading ID: ${beadingId}, Bid ID: ${bidId}`,
-        );
         fetchCarImageAndDetails(beadingId, bidId);
       }
     });
   };
 
   useEffect(() => {
-    // Check if length is different from previous
     if (filteredLiveCars.length === prevFilteredLiveCarsLengthRef.current) {
       return;
     }
@@ -609,7 +605,6 @@ const HomeScreen: React.FC = () => {
       }
     });
 
-    // Update previous length
     prevFilteredLiveCarsLengthRef.current = filteredLiveCars.length;
   }, [filteredLiveCars]);
 
@@ -617,7 +612,6 @@ const HomeScreen: React.FC = () => {
   const openCarDetailsModal = async (car: Car) => {
     setSelectedCarForDetails(car);
     setCarDetailsModalVisible(true);
-    // ✅ NEW: Fetch latest price immediately on view
     if (car.id) {
       await fetchLivePrice(car.id);
     }
@@ -724,7 +718,6 @@ const HomeScreen: React.FC = () => {
         amount: bidValue,
       };
 
-      // UPDATED: Use BASE_URL
       const bidUrl = `${BASE_URL}/Bid/placeBid?bidCarId=${selectedCar.bidCarId}`;
       const response = await fetch(bidUrl, {
         method: 'POST',
@@ -744,24 +737,13 @@ const HomeScreen: React.FC = () => {
 
       if (response.ok) {
         setModalVisible(false);
-        Alert.alert(
-          'Bid Placed Successfully!',
-          `Your bid of ₹${bidValue.toLocaleString()} has been placed.`,
-          [
-            {
-              text: 'OK',
-              onPress: async () => {
-                await refreshAllCarPrices();
-                getLiveCars();
-                const car = filteredLiveCars.find(
-                  c => c.id === selectedCar.bidCarId,
-                );
-                // ✅ TRIGGER NOTIFICATION
-                // if (car) showNotification(car, 'bid');
-              },
-            },
-          ],
-        );
+        setSuccessBidAmount(bidValue);
+        setSuccessModalVisible(true);
+
+        setTimeout(async () => {
+          await refreshAllCarPrices();
+          getLiveCars();
+        }, 1000);
       } else {
         let errorMessage = 'Server Error';
         let debugInfo = 'Unable to place bid. Please try again.';
@@ -797,12 +779,9 @@ const HomeScreen: React.FC = () => {
       carImageData[bidId] ||
       car.imageUrl ||
       'https://photos.caryanamindia.com/1453c850-c6a4-4d46-ab36-6c4dbab27f4c-crysta%201%20-%20Copy.jpg';
-    // Look up carDetails using bidId first (as that's what we store it with), then carId
     const carDetails = carDetailsData[bidId] || carDetailsData[carId];
-    // Look up live price using bidId first (as that's what we store it with), then carId
     const livePriceData = livePrices[bidId] || livePrices[carId];
 
-    // ✅ UPDATED PRICE LOGIC: Takes the highest of API Price or WebSocket Price
     const apiPrice = livePriceData?.price ?? 0;
     const socketPrice = car.currentBid ?? 0;
     const detailsPrice = carDetails?.price ?? 0;
@@ -818,18 +797,6 @@ const HomeScreen: React.FC = () => {
         activeOpacity={0.95}
         onPress={() => openCarDetailsModal(car)}>
         <Image source={{uri: imageUrl}} style={styles.carImage} />
-        {/* <TouchableOpacity
-          style={styles.heartIcon}
-          onPress={e => {
-            e.stopPropagation();
-            toggleWishlist(carId);
-          }}>
-          <Ionicons
-            name={wishlisted ? 'heart' : 'heart-outline'}
-            size={24}
-            color={wishlisted ? '#e74c3c' : '#fff'}
-          />
-        </TouchableOpacity> */}
         {car.isScrap && (
           <View style={styles.scrapBadge}>
             <Text style={styles.scrapText}>SCRAP CAR</Text>
@@ -928,16 +895,12 @@ const HomeScreen: React.FC = () => {
       selectedCarForDetails.imageUrl ||
       'https://photos.caryanamindia.com/1453c850-c6a4-4d46-ab36-6c4dbab27f4c-crysta%201%20-%20Copy.jpg';
 
-    // ✅ NEW: Always look up the latest live car data from the list
-    // This ensures that even if selectedCarForDetails is stale, we get the fresh price/data
     const liveCar =
       filteredLiveCars.find(c => c.id === carId) || selectedCarForDetails;
 
     const carDetails = carDetailsData[carId] || carDetailsData[bidId];
     const livePriceData = livePrices[carId];
 
-    // ✅ UPDATED PRICE LOGIC IN MODAL
-    // Uses livePrices (synced with socket) OR the liveCar object from the list
     const apiPrice = livePriceData?.price ?? 0;
     const socketPrice = liveCar.currentBid ?? 0;
     const detailsPrice = carDetails?.price ?? 0;
@@ -982,15 +945,6 @@ const HomeScreen: React.FC = () => {
               <Ionicons name="arrow-back" size={24} color="#262a4f" />
             </TouchableOpacity>
             <Text style={styles.detailsHeaderTitle}>Car Details</Text>
-            {/* <TouchableOpacity
-              onPress={() => toggleWishlist(carId)}
-              style={styles.headerHeartIcon}>
-              <Ionicons
-                name={isWishlisted(carId) ? 'heart' : 'heart-outline'}
-                size={24}
-                color={isWishlisted(carId) ? '#e74c3c' : '#262a4f'}
-              />
-            </TouchableOpacity> */}
           </View>
 
           <ScrollView
@@ -1232,11 +1186,6 @@ const HomeScreen: React.FC = () => {
               activeOpacity={0.8}>
               <Text style={styles.placeBidButtonText}>PLACE BID</Text>
             </TouchableOpacity>
-            {/* <TouchableOpacity
-              style={styles.interestedButton}
-              activeOpacity={0.8}>
-              <Text style={styles.interestedButtonText}>I am Interested</Text>
-            </TouchableOpacity> */}
           </View>
         </SafeAreaView>
       </Modal>
@@ -1250,69 +1199,21 @@ const HomeScreen: React.FC = () => {
       <LinearGradient
         colors={['#262a4f', '#353a65', '#262a4f']}
         style={styles.gradientBackground}>
-        {/* {notifications.length > 0 && (
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleNotificationClick}
-            style={[
-              styles.notificationBanner,
-              {
-                backgroundColor:
-                  notifications[0].type === 'bid'
-                    ? '#10B981'
-                    : notifications[0].type === 'outbid'
-                    ? '#EF4444'
-                    : notifications[0].type === 'won'
-                    ? '#8B5CF6'
-                    : '#F59E0B',
-                transform: [{translateY: notificationAnim}],
-              },
-            ]}>
-            <MaterialCommunityIcons
-              name={
-                notifications[0].type === 'bid'
-                  ? 'check-circle'
-                  : notifications[0].type === 'outbid'
-                  ? 'alert'
-                  : notifications[0].type === 'won'
-                  ? 'trophy'
-                  : 'clock-alert'
-              }
-              size={20}
-              color="#fff"
-              style={{marginRight: 8}}
-            />
-            <Text style={styles.notificationText}>
-              {notifications[0].message}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={18}
-              color="#fff"
-              style={{marginLeft: 8}}
-            />
-          </TouchableOpacity>
-        )} */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.profileSection}>
-              {/* LOGO */}
               <Image
-                source={require('../../assets/images/logo1.png')}
+                source={require('../../assets/images/caryanam.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
             </View>
-            <TouchableOpacity
-              style={styles.notificationIcon}
-              // onPress={handleNotificationClick}
-              >
+            <TouchableOpacity style={styles.notificationIcon}>
               <Ionicons
                 name="notifications-outline"
                 size={26}
                 color="#a9acd6"
               />
-              <View style={styles.notificationBadge} />
             </TouchableOpacity>
           </View>
           <View style={styles.searchContainer}>
@@ -1322,6 +1223,8 @@ const HomeScreen: React.FC = () => {
                 style={styles.searchInput}
                 placeholder="Search auction"
                 placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
             </View>
           </View>
@@ -1341,26 +1244,6 @@ const HomeScreen: React.FC = () => {
               {renderTab('LIVE', filteredLiveCars.length)}
               {renderTab('OCB', 0)}
             </View>
-            {/* <View style={styles.banner}>
-              <View style={{flex: 1}}>
-                <View style={styles.newLaunchBadge}>
-                  <Text style={styles.bannerTitle}>New launch</Text>
-                </View>
-                <Text style={styles.bannerDesc}>
-                  Get used car loan for your customers{'\n'}Instant valuation |
-                  100% digital
-                </Text>
-                <TouchableOpacity activeOpacity={0.8}>
-                  <View style={styles.exploreBtn}>
-                    <Text style={styles.exploreText}>Explore</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-              <Image
-                source={require('../../assets/images/car3.png')}
-                style={styles.bannerImage}
-              />
-            </View> */}
             <View style={styles.liveCarsHeaderContainer}>
               <View>
                 <Text style={styles.liveCarsHeader}>Live Cars</Text>
@@ -1391,11 +1274,6 @@ const HomeScreen: React.FC = () => {
                   color="#D1D5DB"
                 />
                 <Text style={styles.emptyText}>No live cars available</Text>
-                {/* <TouchableOpacity onPress={handleRetry} activeOpacity={0.8}>
-                  <View style={styles.retryButton}>
-                    <Text style={styles.retryText}>Retry</Text>
-                  </View>
-                </TouchableOpacity> */}
               </View>
             )}
             <View style={{height: 100}} />
@@ -1413,48 +1291,134 @@ const HomeScreen: React.FC = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Place Your Bid</Text>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                style={styles.modalCloseButton}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
             </View>
+
+            <View style={styles.currentBidInfo}>
+              <Text style={styles.currentBidLabel}>Current Highest Bid</Text>
+              <Text style={styles.currentBidAmount}>
+                ₹{(selectedCar?.price || 0).toLocaleString()}
+              </Text>
+            </View>
+
             <View style={styles.amountContainer}>
               <Text style={styles.amountLabel}>Your Bid Amount</Text>
               <View style={styles.bidInputContainer}>
-                <TouchableOpacity onPress={handleDecreaseBid}>
-                  <View style={styles.adjustButtonMinus}>
-                    <Text style={styles.adjustButtonText}>-</Text>
-                  </View>
+                <TouchableOpacity
+                  onPress={handleDecreaseBid}
+                  activeOpacity={0.7}
+                  style={styles.adjustButtonMinus}>
+                  <Ionicons name="remove" size={24} color="#fff" />
                 </TouchableOpacity>
-                <TextInput
-                  style={styles.bidInput}
-                  value={selectedCar ? bidAmounts[selectedCar.bidCarId] : ''}
-                  onChangeText={handleBidInputChange}
-                  keyboardType="numeric"
-                  placeholder="Enter amount"
-                />
-                <TouchableOpacity onPress={handleIncreaseBid}>
-                  <View style={styles.adjustButtonPlus}>
-                    <Text style={styles.adjustButtonText}>+</Text>
-                  </View>
+                <View style={styles.bidInputWrapper}>
+                  <Text style={styles.rupeeSymbol}>₹</Text>
+                  <TextInput
+                    style={styles.bidInput}
+                    value={selectedCar ? bidAmounts[selectedCar.bidCarId] : ''}
+                    onChangeText={handleBidInputChange}
+                    keyboardType="numeric"
+                    placeholder="Enter amount"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={handleIncreaseBid}
+                  activeOpacity={0.7}
+                  style={styles.adjustButtonPlus}>
+                  <Ionicons name="add" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.bidIncrementHint}>
+                Minimum increment: ₹2,000
+              </Text>
             </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}>
+                onPress={() => setModalVisible(false)}
+                activeOpacity={0.8}>
                 <Text style={styles.cancelButtonText}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handlePlaceBid}
-                disabled={biddingStates[selectedCar?.bidCarId || '']}>
-                <View style={styles.confirmButton}>
-                  {biddingStates[selectedCar?.bidCarId || ''] ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
+                disabled={biddingStates[selectedCar?.bidCarId || '']}
+                activeOpacity={0.8}
+                style={[
+                  styles.confirmButton,
+                  biddingStates[selectedCar?.bidCarId || ''] &&
+                    styles.confirmButtonDisabled,
+                ]}>
+                {biddingStates[selectedCar?.bidCarId || ''] ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
                     <Text style={styles.confirmButtonText}>CONFIRM BID</Text>
-                  )}
-                </View>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color="#fff"
+                      style={{marginLeft: 8}}
+                    />
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* SUCCESS MODAL */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={successModalVisible}
+        onRequestClose={() => setSuccessModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[
+              styles.successModalContent,
+              {
+                transform: [
+                  {
+                    scale: successModalVisible ? 1 : 0.5,
+                  },
+                ],
+              },
+            ]}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+            </View>
+            <Text style={styles.successTitle}>Bid Placed Successfully!</Text>
+            <View style={styles.successAmountContainer}>
+              <Text style={styles.successAmountLabel}>Your Bid</Text>
+              <Text style={styles.successAmount}>
+                ₹{successBidAmount.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.successDivider} />
+            <Text style={styles.successMessage}>
+              🎉 Your bid has been placed successfully!{'\n'}
+            </Text>
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={() => setSuccessModalVisible(false)}
+              activeOpacity={0.8}>
+              <Text style={styles.successButtonText}>GREAT!</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.viewAllBidsButton}
+              onPress={() => {
+                setSuccessModalVisible(false);
+                // Navigate to bids page if you have one
+              }}
+              activeOpacity={0.8}>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </Modal>
 

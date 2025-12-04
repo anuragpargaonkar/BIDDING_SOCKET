@@ -468,7 +468,7 @@ const AccountScreen = ({navigation}: any) => {
               </View>
 
               <TouchableOpacity style={styles.editButton} onPress={closeModal}>
-                <Text style={styles.editButtonText}>EDIT PROFILE</Text>
+                <Text style={styles.editButtonText}>CLOSE PROFILE</Text>
               </TouchableOpacity>
             </>
           ) : (
