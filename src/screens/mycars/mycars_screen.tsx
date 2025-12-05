@@ -20,6 +20,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useWishlist} from '../../context/WishlistContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../../utility/serverConfig';
 
 const {width} = Dimensions.get('window');
 
@@ -120,7 +121,7 @@ const MyCarsScreen = ({navigation}: any) => {
     const beadingCarId = car.beadingCarId || car.bidCarId || car.id;
     try {
       const response = await fetch(
-        `https://car01.dostenterprises.com/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`,
+        `${BASE_URL}/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`,
       );
       const text = await response.text();
       let imgArray: any[] = [];
@@ -173,7 +174,7 @@ const MyCarsScreen = ({navigation}: any) => {
     if (showLoading) setLoading(true);
     try {
       const res = await fetch(
-        `https://car01.dostenterprises.com/BeadingCarController/getByDealerID/${dealerId}`,
+        `${BASE_URL}/BeadingCarController/getByDealerID/${dealerId}`,
       );
       const text = await res.text();
       let data;

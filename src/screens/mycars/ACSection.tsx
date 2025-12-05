@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import {BASE_URL} from '../../utility/serverConfig';
 
 interface AcSectionProps {
   beadingCarId: string;
@@ -36,7 +37,7 @@ const AcSection: React.FC<AcSectionProps> = ({beadingCarId}) => {
     try {
       const docType = 'AC';
       const response = await fetch(
-        `https://car01.dostenterprises.com/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
+        `${BASE_URL}/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
       );
       const text = await response.text();
       const data = JSON.parse(text);

@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Animated,
   Easing,
   Alert,
@@ -17,12 +16,12 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {launchImageLibrary} from 'react-native-image-picker';
-import styles from '../account/AccountScreen.styles'; // Imported styles
+import styles from '../account/AccountScreen.styles';
+import {apiConfig} from '../../utility/serverConfig';
 
 const TOKEN_KEY = 'auth_token';
 
 const AccountScreen = ({navigation}: any) => {
-  const [doNotDisturb, setDoNotDisturb] = useState(false);
   const [dealerData, setDealerData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -42,8 +41,7 @@ const AccountScreen = ({navigation}: any) => {
           .join(''),
       );
       return JSON.parse(jsonPayload);
-    } catch (error) {
-      console.error('JWT Parse Error:', error);
+    } catch {
       return null;
     }
   };
@@ -51,54 +49,41 @@ const AccountScreen = ({navigation}: any) => {
   const fetchDealerData = async () => {
     try {
       setLoading(true);
+
       const token = await AsyncStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        Alert.alert('Error', 'Missing authentication token.');
-        setLoading(false);
-        return;
-      }
+      if (!token) return Alert.alert('Error', 'Token missing.');
 
       const decoded = parseJwt(token);
       const dealerId = decoded?.dealerId;
       const userId = decoded?.userId;
+
       if (!dealerId || !userId) {
-        Alert.alert('Error', 'User or Dealer ID not found.');
-        setLoading(false);
+        Alert.alert('Error', 'User/Dealer ID missing.');
         return;
       }
 
-      const dealerRes = await fetch(
-        `https://car01.dostenterprises.com/dealer/${dealerId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        },
+      // -------- GET DEALER DATA (serverConfig) ----------
+      const dealerResponse = await apiConfig.user.getDealerById(
+        dealerId,
+        token,
       );
+      if (dealerResponse?.dealerDto) {
+        setDealerData(dealerResponse.dealerDto);
+      }
 
-      const dealerJson = await dealerRes.json();
-      if (dealerRes.ok && dealerJson?.dealerDto)
-        setDealerData(dealerJson.dealerDto);
+      // -------- GET PROFILE PHOTO (serverConfig) ----------
+      const photoResponse = await apiConfig.user.getProfilePhoto(userId, token);
 
-      const photoRes = await fetch(
-        `https://car01.dostenterprises.com/ProfilePhoto/getbyuserid?userId=${userId}`,
-        {headers: {Authorization: `Bearer ${token}`}},
-      );
-
-      if (photoRes.ok) {
-        const blob = await photoRes.blob();
+      if (photoResponse.ok) {
+        const blob = await photoResponse.blob();
         const reader = new FileReader();
-        reader.onload = () => {
-          setPhotoUrl(reader.result as string);
-        };
+        reader.onload = () => setPhotoUrl(reader.result as string);
         reader.readAsDataURL(blob);
       } else {
         setPhotoUrl(null);
       }
     } catch (error) {
-      console.error('Error fetching dealer data:', error);
-      Alert.alert('Error', 'Unable to fetch dealer data.');
+      Alert.alert('Error', 'Failed to load profile data.');
       setPhotoUrl(null);
     } finally {
       setLoading(false);
@@ -108,10 +93,11 @@ const AccountScreen = ({navigation}: any) => {
   const handleAddImage = async () => {
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
-      if (!token) return Alert.alert('Error', 'Missing token.');
+      if (!token) return;
+
       const decoded = parseJwt(token);
       const userId = decoded?.userId;
-      if (!userId) return Alert.alert('Error', 'User ID not found.');
+      if (!userId) return;
 
       const result = await launchImageLibrary({
         mediaType: 'photo',
@@ -120,40 +106,32 @@ const AccountScreen = ({navigation}: any) => {
       if (result.didCancel || !result.assets?.length) return;
 
       const file = result.assets[0];
-      if (!file.uri) return Alert.alert('Error', 'Image URI not found.');
 
       const formData = new FormData();
       formData.append('image', {
         uri: file.uri,
-        name: file.fileName || 'photo.jpg',
+        name: file.fileName || 'profile.jpg',
         type: file.type || 'image/jpeg',
       } as any);
 
       formData.append('userId', userId.toString());
 
       setLoading(true);
-      const res = await fetch(
-        'https://car01.dostenterprises.com/ProfilePhoto/add',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        },
+
+      // -------- ADD PROFILE PHOTO (serverConfig) ----------
+      const uploadResponse = await apiConfig.user.addProfilePhoto(
+        formData,
+        token,
       );
 
-      if (res.ok) {
-        Alert.alert('Success', 'Profile photo added successfully.');
+      if (uploadResponse.ok) {
+        Alert.alert('Success', 'Profile photo uploaded.');
         fetchDealerData();
       } else {
-        const errorText = await res.text();
-        console.error('Upload failed:', errorText);
         Alert.alert('Error', 'Failed to upload photo.');
       }
     } catch (error) {
-      console.error('Add image error:', error);
-      Alert.alert('Error', 'Could not upload photo.');
+      Alert.alert('Error', 'Unable to upload photo.');
     } finally {
       setLoading(false);
     }
@@ -162,43 +140,29 @@ const AccountScreen = ({navigation}: any) => {
   const handleDeleteImage = async () => {
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
-      if (!token) return Alert.alert('Error', 'Missing token.');
+      if (!token) return;
+
       const decoded = parseJwt(token);
       const userId = decoded?.userId;
-      if (!userId) return Alert.alert('Error', 'User ID not found.');
+      if (!userId) return;
 
       setLoading(true);
-      const res = await fetch(
-        `https://car01.dostenterprises.com/ProfilePhoto/deletebyuserid?userId=${userId}`,
-        {
-          method: 'DELETE',
-          headers: {Authorization: `Bearer ${token}`},
-        },
+
+      // -------- DELETE PROFILE PHOTO (serverConfig) ----------
+      const deleteResponse = await apiConfig.user.deleteProfilePhoto(
+        userId,
+        token,
       );
 
-      if (res.ok) {
+      if (deleteResponse.ok) {
         setPhotoUrl(null);
-        Alert.alert('Deleted', 'Profile photo removed successfully.');
+        Alert.alert('Deleted', 'Profile photo removed.');
         fetchDealerData();
       } else {
-        const errorText = await res.text();
-        console.error('Delete failed:', errorText);
-        let msg = 'Failed to delete photo.';
-        try {
-          const err = JSON.parse(errorText);
-          if (err.message?.includes('not found')) {
-            setPhotoUrl(null);
-            Alert.alert('Info', 'No profile photo to delete.');
-            fetchDealerData();
-            return;
-          }
-          msg = err.message || msg;
-        } catch {}
-        Alert.alert('Error', msg);
+        Alert.alert('Error', 'Failed to delete photo.');
       }
     } catch (error) {
-      console.error('Delete image error:', error);
-      Alert.alert('Error', 'Could not delete photo.');
+      Alert.alert('Error', 'Unable to delete photo.');
     } finally {
       setLoading(false);
     }
@@ -222,18 +186,14 @@ const AccountScreen = ({navigation}: any) => {
   };
 
   const confirmLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to log out?', [
+    Alert.alert('Logout', 'Are you sure?', [
       {text: 'Cancel', style: 'cancel'},
       {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          try {
-            await AsyncStorage.removeItem(TOKEN_KEY);
-            navigation.replace('Login');
-          } catch {
-            Alert.alert('Error', 'Failed to log out. Please try again.');
-          }
+          await AsyncStorage.removeItem(TOKEN_KEY);
+          navigation.replace('Login');
         },
       },
     ]);
@@ -246,6 +206,7 @@ const AccountScreen = ({navigation}: any) => {
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start();
+
     fetchDealerData();
   }, []);
 
@@ -256,12 +217,11 @@ const AccountScreen = ({navigation}: any) => {
         <View style={styles.headerInner}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.navigate('Home')}>
+            onPress={() => navigation.navigate('HomeTab')}>
             <View style={styles.logoWrapper}>
               <Image
                 source={require('../../assets/images/caryanam.png')}
                 style={styles.logoImage}
-                resizeMode="cover"
               />
             </View>
           </TouchableOpacity>
@@ -288,65 +248,31 @@ const AccountScreen = ({navigation}: any) => {
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={{paddingBottom: 40}}>
-        {/* <View style={styles.topBanner}>
-          <Text style={styles.topBannerText}>Get unlimited app access</Text>
-          <Text style={styles.topBannerSub}>
-            Buy <Text style={styles.highlight}>Basic</Text> at just ₹500 / month
-          </Text>
-          <TouchableOpacity style={{marginTop: 8}}>
-            <Text style={styles.knowMore}>Know more</Text>
-          </TouchableOpacity>
-        </View> */}
-
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={styles.profileCard}
-          onPress={openModal}>
+        <TouchableOpacity style={styles.profileCard} onPress={openModal}>
           {photoUrl ? (
             <Image source={{uri: photoUrl}} style={styles.profileAvatar} />
           ) : (
             <Ionicons name="person-circle-outline" size={64} color="#262A4F" />
           )}
+
           <View style={styles.profileText}>
             <Text style={styles.profileName}>
               {dealerData
                 ? `${dealerData.firstName} ${dealerData.lastName || ''}`
-                : loading
-                ? 'Loading...'
-                : 'Name not available'}
+                : 'Loading...'}
             </Text>
+
             <Text style={styles.profileDetails}>
-              {dealerData?.mobileNo ||
-                (loading ? 'Loading...' : 'Mobile not available')}
+              {dealerData?.mobileNo || '—'}
             </Text>
+
             <Text style={styles.profileDetails}>
-              Shop: {dealerData?.shopName || (loading ? 'Loading...' : '—')}
+              Shop: {dealerData?.shopName || '—'}
             </Text>
           </View>
+
           <Ionicons name="chevron-forward-outline" size={24} color="#A9ACD6" />
         </TouchableOpacity>
-
-        {/* <View style={styles.twoCards}>
-          <View style={styles.bigCard}>
-            <Ionicons name="wallet-outline" size={34} color="#262A4F" />
-            <Text style={styles.bigCardTitle}>Payment details</Text>
-            <TouchableOpacity style={styles.rechargeBtn}>
-              <Text style={styles.bigRechargeText}>₹0 | RECHARGE NOW</Text>
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Text style={styles.bigAccentLink}>Recharge more</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.bigCard}>
-            <Ionicons name="person-outline" size={34} color="#262A4F" />
-            <Text style={styles.bigCardTitle}>Sales agent</Text>
-            <Text style={styles.bigCardSub}>Organic Mumbai</Text>
-            <TouchableOpacity style={{marginTop: 'auto'}}>
-              <Text style={styles.bigAccentLink}>Call agent</Text>
-            </TouchableOpacity>
-          </View>
-        </View> */}
 
         <View style={styles.storyBanner}>
           <Text style={styles.storyText}>
@@ -360,6 +286,7 @@ const AccountScreen = ({navigation}: any) => {
               onPress={() => Linking.openURL('mailto:info@caryanam.in')}>
               <Ionicons name="mail-outline" size={18} color="#fff" />
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.socialIcon}
               onPress={() =>
@@ -367,6 +294,7 @@ const AccountScreen = ({navigation}: any) => {
               }>
               <Ionicons name="logo-instagram" size={18} color="#fff" />
             </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.socialIcon}
               onPress={() =>
@@ -378,24 +306,6 @@ const AccountScreen = ({navigation}: any) => {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/*
-        <View style={styles.settingsCard}>
-          <Text style={styles.settingsTitle}>Do not disturb</Text>
-          <Switch
-            value={doNotDisturb}
-            onValueChange={setDoNotDisturb}
-            thumbColor="#262A4F"
-            trackColor={{ false: '#E5E7FF', true: '#61AFFE' }}
-            ios_backgroundColor="#E5E7FF"
-          />
-        </View>
-        */}
-
-        {/* <TouchableOpacity style={styles.rewardsCard}>
-          <Ionicons name="gift-outline" size={28} color="#262A4F" />
-          <Text style={styles.rewardsText}>My rewards</Text>
-        </TouchableOpacity> */}
 
         <TouchableOpacity style={styles.logoutCard} onPress={confirmLogout}>
           <Ionicons name="log-out-outline" size={28} color="#262A4F" />
@@ -430,11 +340,7 @@ const AccountScreen = ({navigation}: any) => {
             <>
               <View style={styles.profileImageContainer}>
                 {photoUrl ? (
-                  <Image
-                    source={{uri: photoUrl}}
-                    style={styles.profileImage}
-                    resizeMode="cover"
-                  />
+                  <Image source={{uri: photoUrl}} style={styles.profileImage} />
                 ) : (
                   <Ionicons
                     name="person-circle-outline"
@@ -442,18 +348,18 @@ const AccountScreen = ({navigation}: any) => {
                     color="#ccc"
                   />
                 )}
-                <View style={styles.imageButtonRow}>
-                  {/* <TouchableOpacity
+                {/* <View style={styles.imageButtonRow}>
+                  <TouchableOpacity
                     style={styles.addImageButton}
                     onPress={handleAddImage}>
                     <Text style={styles.addImageText}>ADD IMAGE</Text>
-                  </TouchableOpacity> */}
-                  {/* <TouchableOpacity
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={styles.deleteImageButton}
                     onPress={handleDeleteImage}>
                     <Text style={styles.deleteImageText}>DELETE IMAGE</Text>
-                  </TouchableOpacity> */}
-                </View>
+                  </TouchableOpacity>
+                </View> */}
               </View>
 
               <View style={styles.detailBox}>
@@ -486,7 +392,6 @@ const AccountScreen = ({navigation}: any) => {
   );
 };
 
-// FIXED: Address wraps to next line
 const DetailRow = ({label, value}: {label: string; value?: string}) => (
   <View style={styles.detailRow}>
     <Text style={styles.detailLabel}>{label}</Text>

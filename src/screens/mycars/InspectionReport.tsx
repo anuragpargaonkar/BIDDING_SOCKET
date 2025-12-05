@@ -16,6 +16,7 @@ import ACSection from './ACSection';
 import ElectricalSection from './ElectricalSection';
 import SteeringSection from './SteeringSection';
 import EngineVideoSection from './EngineVideoSection';
+import { BASE_URL } from '../../utility/serverConfig';
 
 const COLORS = {
   primary: '#262a4f',
@@ -58,7 +59,7 @@ const InspectionReport = ({route, navigation}: any) => {
     setLoading(true);
     try {
       const res = await fetch(
-        `https://car01.dostenterprises.com/inspectionReport/getByBeadingCar?beadingCarId=${beadingCarId}`,
+        `${BASE_URL}/inspectionReport/getByBeadingCar?beadingCarId=${beadingCarId}`,
       );
       const text = await res.text();
       const data = JSON.parse(text);

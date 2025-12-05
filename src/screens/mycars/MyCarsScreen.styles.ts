@@ -1,4 +1,6 @@
-import { StyleSheet } from "react-native";
+import { Dimensions, StyleSheet } from "react-native";
+
+const { width } = Dimensions.get('window');
 
 const COLORS = {
   primary: '#262a4f',
@@ -190,6 +192,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {fontSize: 14, color: '#666'},
   imageScrollView: {width: '100%', height: 240},
+  modalImage: {width: width * 0.95, height: 240, resizeMode: 'cover'},
   imageIndicator: {
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingVertical: 6,
@@ -242,5 +245,6 @@ const styles = StyleSheet.create({
   locationInfo: {flexDirection: 'row', alignItems: 'center', marginTop: 12},
   locationText: {fontSize: 14, color: '#333', marginLeft: 8, fontWeight: '500'},
 });
+
 
 export default styles;

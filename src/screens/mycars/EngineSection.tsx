@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { BASE_URL } from '../../utility/serverConfig';
 
 interface EngineSectionProps {
   beadingCarId: string;
@@ -46,7 +47,7 @@ const EngineSection: React.FC<EngineSectionProps> = ({beadingCarId}) => {
     try {
       const docType = 'Engine';
       const response = await fetch(
-        `https://car01.dostenterprises.com/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
+        `${BASE_URL}/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
       );
       const text = await response.text();
       const data = JSON.parse(text);

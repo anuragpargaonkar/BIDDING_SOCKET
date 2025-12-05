@@ -15,6 +15,7 @@ import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import LinearGradient from 'react-native-linear-gradient';
 import styles from './ForgotPasswordStyles';
+import {BASE_URL} from '../../utility/serverConfig';
 
 // Navigation types
 type RootStackParamList = {
@@ -42,8 +43,9 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
+      // FIXED → replaced '${BASE_URL}' with `${BASE_URL}`
       const response = await fetch(
-        'https://car01.dostenterprises.com/cars/forgot-password',
+        `${BASE_URL}/cars/forgot-password`,
         {
           method: 'POST',
           headers: {
@@ -92,7 +94,6 @@ const ForgotPassword = () => {
           style={styles.logo}
           resizeMode="contain"
         />
-        {/* <Text style={styles.logoTitle}>CARYANAMINDIA</Text> */}
       </View>
 
       {/* White Curved Card */}

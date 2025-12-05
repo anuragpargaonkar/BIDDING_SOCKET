@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { BASE_URL } from '../../utility/serverConfig';
 
 interface ExteriorSectionProps {
   beadingCarId: string;
@@ -114,7 +115,7 @@ const ExteriorSection: React.FC<ExteriorSectionProps> = ({beadingCarId}) => {
     try {
       const docType = 'Exterior';
       const response = await fetch(
-        `https://car01.dostenterprises.com/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
+        `${BASE_URL}/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
       );
       const text = await response.text();
       const data = JSON.parse(text);

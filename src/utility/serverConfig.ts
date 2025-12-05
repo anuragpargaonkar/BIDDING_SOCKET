@@ -3,13 +3,18 @@
 // ============================================================
 // 1. REST API BASE URL
 // ============================================================
-export const BASE_URL = 'https://car01.dostenterprises.com';
+// export const BASE_URL = 'https://car01.dostenterprises.com';
+export const BASE_URL = 'http://192.168.1.51:8086';
+
  
 // ============================================================
 // 2. WEBSOCKET CONFIGURATION
 // ============================================================
 // Primary Socket URL
-export const SOCKET_SERVER_URL = 'https://webs01.dostenterprises.com';
+// export const SOCKET_SERVER_URL = 'https://webs01.dostenterprises.com';
+export const SOCKET_SERVER_URL = 'http://192.168.1.51:3000';
+
+
  
 // Fallback URLs (Client can try these if primary fails)
 export const SOCKET_SERVER_URLS = [
@@ -91,89 +96,6 @@ export const apiConfig = {
       return response;
     },
   },
- 
-  // ----------------------------------------------------------
-  // BIDDING
-  // ----------------------------------------------------------
-  bid: {
-    getLiveValue: async (bidCarId: string) => {
-      const response = await fetch(
-        `${BASE_URL}/Bid/getliveValue?bidCarId=${bidCarId}`,
-      );
-      return await response.json();
-    },
- 
-    placeBid: async (bidCarId: string, token: string, body: any) => {
-      const response = await fetch(
-        `${BASE_URL}/Bid/placeBid?bidCarId=${bidCarId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-          body: JSON.stringify(body),
-        },
-      );
-      return response;
-    },
- 
-    getFinalBids: async (token: string) => {
-      const response = await fetch(`${BASE_URL}/Bid/finalBids`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      return response.json();
-    },
-  },
- 
-  // ----------------------------------------------------------
-  // CAR DETAILS
-  // ----------------------------------------------------------
-  car: {
-    getByBidCarId: async (bidCarId: string) => {
-      const response = await fetch(
-        `${BASE_URL}/BeadingCarController/getByBidCarId/${bidCarId}`,
-      );
-      return await response.text();
-    },
- 
-    getByDealerId: async (dealerId: string) => {
-      const response = await fetch(
-        `${BASE_URL}/BeadingCarController/getByDealerID/${dealerId}`,
-      );
-      return await response.text();
-    },
- 
-    getImagesByBeadingId: async (beadingCarId: string) => {
-      const response = await fetch(
-        `${BASE_URL}/uploadFileBidCar/getByBidCarID?beadingCarId=${beadingCarId}`,
-      );
-      return await response.text();
-    },
-  },
- 
-  // ----------------------------------------------------------
-  // INSPECTION
-  // ----------------------------------------------------------
-  inspection: {
-    getReportByBeadingId: async (beadingCarId: string) => {
-      const response = await fetch(
-        `${BASE_URL}/inspectionReport/getByBeadingCar?beadingCarId=${beadingCarId}`,
-      );
-      return await response.text();
-    },
- 
-    getSectionData: async (beadingCarId: string, docType: string) => {
-      const response = await fetch(
-        `${BASE_URL}/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
-      );
-      return await response.text();
-    },
-  },
+  
 };
  

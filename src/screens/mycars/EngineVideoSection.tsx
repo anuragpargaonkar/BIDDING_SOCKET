@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Video from 'react-native-video';
+import { BASE_URL } from '../../utility/serverConfig';
 
 interface EngineVideoSectionProps {
   beadingCarId: string;
@@ -32,7 +33,7 @@ const EngineVideoSection: React.FC<EngineVideoSectionProps> = ({
     try {
       const docType = 'EngineVideo';
       const response = await fetch(
-        `https://car01.dostenterprises.com/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
+        `${BASE_URL}/uploadFileBidCar/getBidCarIdType?beadingCarId=${beadingCarId}&docType=${docType}`,
       );
       const text = await response.text();
       const data = JSON.parse(text);
