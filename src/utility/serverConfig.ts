@@ -3,18 +3,13 @@
 // ============================================================
 // 1. REST API BASE URL
 // ============================================================
-// export const BASE_URL = 'https://car01.dostenterprises.com';
-export const BASE_URL = 'http://192.168.1.51:8086';
-
+export const BASE_URL = 'https://car01.dostenterprises.com';
  
 // ============================================================
 // 2. WEBSOCKET CONFIGURATION
 // ============================================================
 // Primary Socket URL
-// export const SOCKET_SERVER_URL = 'https://webs01.dostenterprises.com';
-export const SOCKET_SERVER_URL = 'http://192.168.1.51:3000';
-
-
+export const SOCKET_SERVER_URL = 'https://webs01.dostenterprises.com';
  
 // Fallback URLs (Client can try these if primary fails)
 export const SOCKET_SERVER_URLS = [
