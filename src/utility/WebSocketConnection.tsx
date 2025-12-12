@@ -871,7 +871,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
         userId: userData.userId,
         bidCarId: userData.bidCarId,
         amount: userData.amount,
-        dateTime: new Date().toISOString(),
+        dateTime: new Date().toLocaleString(),
       });
     });
   };
