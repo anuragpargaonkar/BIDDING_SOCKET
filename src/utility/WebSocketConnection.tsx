@@ -60,21 +60,21 @@
 // const debugLog = (...args: any[]) => {
 //   if (ENABLE_SOCKET_DEBUG_LOGS) {
 //     // eslint-disable-next-line no-console
-//     console.log('[WebSocket Debug]', new Date().toISOString(), ...args);
+//     console.log('[WebSocket Debug]', new Date().toLocaleString(), ...args);
 //   }
 // };
 
 // const debugError = (...args: any[]) => {
 //   if (ENABLE_SOCKET_DEBUG_LOGS) {
 //     // eslint-disable-next-line no-console
-//     console.error('[WebSocket Error]', new Date().toISOString(), ...args);
+//     console.error('[WebSocket Error]', new Date().toLocaleString(), ...args);
 //   }
 // };
 
 // const debugWarn = (...args: any[]) => {
 //   if (ENABLE_SOCKET_DEBUG_LOGS) {
 //     // eslint-disable-next-line no-console
-//     console.warn('[WebSocket Warning]', new Date().toISOString(), ...args);
+//     console.warn('[WebSocket Warning]', new Date().toLocaleString(), ...args);
 //   }
 // };export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
 //   children,
@@ -418,7 +418,7 @@
 //       userId: userData.userId,
 //       bidCarId: userData.bidCarId,
 //       amount: userData.amount,
-//       dateTime: new Date().toISOString(),
+//       dateTime: new Date().toLocaleString(),
 //     };
 
 //     return new Promise((resolve, reject) => {
@@ -609,12 +609,12 @@ const ENABLE_SOCKET_DEBUG_LOGS = true;
 
 const debugLog = (...args: any[]) => {
   if (ENABLE_SOCKET_DEBUG_LOGS) {
-    console.log('[Socket.IO]', new Date().toISOString(), ...args);
+    console.log('[Socket.IO]', new Date().toLocaleString(), ...args);
   }
 };
 
 const debugError = (...args: any[]) => {
-  console.error('[Socket.IO ERROR]', new Date().toISOString(), ...args);
+  console.error('[Socket.IO ERROR]', new Date().toLocaleString(), ...args);
 };
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
