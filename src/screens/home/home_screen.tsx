@@ -132,6 +132,8 @@ const HomeScreen: React.FC = () => {
   const prevFilteredLiveCarsLengthRef = useRef(0);
   const filteredLiveCarsRef = useRef<Car[]>([]);
   const fetchingRef = useRef<Set<string>>(new Set());
+  const pricePollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const lastPriceFetchTime = useRef<{[key: string]: number}>({});
 
   const route = useRoute<HomeScreenRouteProp>();
   const routeParams = route.params;
@@ -220,7 +222,7 @@ const HomeScreen: React.FC = () => {
     filteredLiveCarsRef.current = filteredLiveCars;
   }, [filteredLiveCars]);
 
-  // === IMMEDIATE CAR DISPLAY (UPDATED FIX) ===
+  // === IMMEDIATE CAR DISPLAY (FIXED - NO CONTINUOUS FETCHING) ===
   useEffect(() => {
     if (liveCars.length > 0) {
       const now = Date.now();
@@ -254,69 +256,70 @@ const HomeScreen: React.FC = () => {
       const filtered = filterCarsBySearch(activeCars, searchQuery);
       setFilteredLiveCars(filtered);
 
-      // 3. Price update logic
-      setLivePrices(prev => {
-        const next = {...prev};
-        let changed = false;
-        // We iterate over the ORIGINAL liveCars to ensure we have prices for everything,
-        // but we only display filtered ones.
-        liveCars.forEach(car => {
-          const id = car.id;
-          const bidId = car.bidCarId;
-          const currentBid = car.currentBid || 0;
+      // 3. Price update logic - ONLY UPDATE IF PRICE ACTUALLY CHANGED
+      liveCars.forEach(car => {
+        const id = car.id;
+        const bidId = car.bidCarId;
+        const currentBid = car.currentBid || 0;
 
-          if (currentBid > 0) {
-            if (!next[id] || currentBid > next[id].price) {
-              next[id] = {
-                ...(next[id] || {}),
-                price: currentBid,
-                timeLeft: next[id]?.timeLeft || '',
-              };
-              changed = true;
+        if (currentBid > 0) {
+          setLivePrices(prev => {
+            const existingPrice = prev[id]?.price || 0;
+            const existingBidPrice = bidId && bidId !== id ? prev[bidId]?.price || 0 : 0;
+            
+            // Only update if price actually changed
+            if (currentBid > existingPrice || (bidId && currentBid > existingBidPrice)) {
+              const next = {...prev};
+              if (currentBid > existingPrice) {
+                next[id] = {
+                  ...(next[id] || {}),
+                  price: currentBid,
+                  timeLeft: next[id]?.timeLeft || '',
+                };
+              }
+              if (bidId && bidId !== id && currentBid > existingBidPrice) {
+                next[bidId] = {
+                  ...(next[bidId] || {}),
+                  price: currentBid,
+                  timeLeft: next[bidId]?.timeLeft || '',
+                };
+              }
+              return next;
             }
-            if (
-              bidId &&
-              bidId !== id &&
-              (!next[bidId] || currentBid > next[bidId].price)
-            ) {
-              next[bidId] = {
-                ...(next[bidId] || {}),
-                price: currentBid,
-                timeLeft: next[bidId]?.timeLeft || '',
-              };
-              changed = true;
-            }
-          }
-        });
-        return changed ? next : prev;
-      });
-
-      setTimeout(() => {
-        const currentCars = filteredLiveCarsRef.current;
-        if (currentCars.length > 0) {
-          currentCars.forEach(car => {
-            if (car.id) fetchLivePrice(car.id);
+            return prev;
           });
         }
-      }, 500);
+      });
     }
-  }, [liveCars, searchQuery, filterCarsBySearch, carAuctionTimes]);
+  }, [liveCars, searchQuery, filterCarsBySearch, carAuctionTimes, parseDateTime]);
 
-  // === AUTOMATIC PRICE POLLING (3 Seconds) ===
+  // === AUTOMATIC PRICE POLLING (3 Seconds) - FIXED WITH DEBOUNCING ===
   useEffect(() => {
-    const interval = setInterval(() => {
-      const currentCars = filteredLiveCarsRef.current;
-      if (currentCars.length > 0) {
-        currentCars.forEach(car => {
-          if (car.id) {
-            fetchLivePrice(car.id);
-          }
-        });
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Clear any existing interval
+  if (pricePollingInterval.current) clearInterval(pricePollingInterval.current);
+  
+  pricePollingInterval.current = setInterval(() => {
+    const currentCars = filteredLiveCarsRef.current;
+    const now = Date.now();
+    
+    if (currentCars.length === 0) return; // FIXED: Early return if no cars
+    
+    currentCars.forEach(car => {
+      if (!car.id) return;
+      
+      // FIXED: Increase throttle from 2.5s to 10s + only poll if WebSocket disconnected
+      const lastFetch = lastPriceFetchTime.current[car.id] || 0;
+      if (now - lastFetch < 10000 || isConnected) return; // 10s throttle + skip if WS connected
+      
+      lastPriceFetchTime.current[car.id] = now;
+      fetchLivePrice(car.id);
+    });
+  }, 10000); // FIXED: 10s interval instead of 3s
+  
+  return () => {
+    if (pricePollingInterval.current) clearInterval(pricePollingInterval.current);
+  };
+}, []); // Empty deps - runs once
 
   // === AUCTION TIME LOGIC ===
   useEffect(() => {
@@ -363,11 +366,8 @@ const HomeScreen: React.FC = () => {
         }
         const auctionTime = carAuctionTimes[car.id];
         if (!auctionTime) {
-          // If no auction time found, check if we should add it (newly added)
           const hasTimer = countdownTimers[car.id];
           if (!hasTimer) {
-             // Logic to add default timer if needed, or skip
-             // For strict filtering, we might want to skip pushing to activeCars if no time exists
              activeCars.push(car);
              newTimers[car.id] = '00:30:00';
           }
@@ -443,6 +443,7 @@ const HomeScreen: React.FC = () => {
     loadStoredAuthData();
     return () => {
       if (countdownInterval.current) clearInterval(countdownInterval.current);
+      if (pricePollingInterval.current) clearInterval(pricePollingInterval.current);
     };
   }, []);
 
@@ -465,7 +466,7 @@ const HomeScreen: React.FC = () => {
     if (connectionStatus === 'disconnected') {
       connectWebSocket();
     }
-  }, [connectionStatus]);
+  }, [connectionStatus, connectWebSocket]);
 
   useEffect(() => {
     if (connectionStatus === 'connected' || connectionStatus === 'error') {
@@ -474,6 +475,23 @@ const HomeScreen: React.FC = () => {
       setIsLoading(true);
     }
   }, [connectionStatus]);
+
+  useEffect(() => {
+  const initLiveCars = async () => {
+    if (!hasRequestedLiveCarsRef.current) {
+      hasRequestedLiveCarsRef.current = true;
+      try {
+        await getLiveCars(); // Initial fetch
+      } catch (error) {
+        console.error('Failed to fetch initial live cars:', error);
+      }
+    }
+  };
+  
+  if (connectionStatus === 'connected' || connectionStatus === 'disconnected') {
+    initLiveCars();
+  }
+}, [connectionStatus, getLiveCars]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -488,12 +506,21 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+  // Auto-refresh once on mount (2 second delay)
+  const timer = setTimeout(() => {
+    onRefresh();
+  }, 2000);
+  
+  return () => clearTimeout(timer);
+}, []);
+
   const handleRetry = () => {
     setIsLoading(true);
     connectWebSocket();
   };
 
-  // === API CALLS ===
+  // === API CALLS - FIXED WITH DEBOUNCING ===
   const fetchLivePrice = async (
     bidCarId: string,
   ): Promise<LivePriceData | null> => {
@@ -510,7 +537,16 @@ const HomeScreen: React.FC = () => {
           data?.object?.auctionStartTime || data?.object?.startTime,
         auctionEndTime: data?.object?.auctionEndTime || data?.object?.endTime,
       };
-      setLivePrices(prev => ({...prev, [bidCarId]: livePriceData}));
+      
+      // Only update if price changed
+      setLivePrices(prev => {
+        const existingPrice = prev[bidCarId]?.price || 0;
+        if (price !== existingPrice) {
+          return {...prev, [bidCarId]: livePriceData};
+        }
+        return prev;
+      });
+      
       return livePriceData;
     } catch (error) {
       return null;
@@ -518,8 +554,16 @@ const HomeScreen: React.FC = () => {
   };
 
   const refreshAllCarPrices = async () => {
+    const now = Date.now();
     const promises = filteredLiveCars.map(car => {
-      if (car.id) return fetchLivePrice(car.id);
+      if (car.id) {
+        const lastFetch = lastPriceFetchTime.current[car.id] || 0;
+        // Only fetch if last fetch was more than 2 seconds ago
+        if (now - lastFetch > 2000) {
+          lastPriceFetchTime.current[car.id] = now;
+          return fetchLivePrice(car.id);
+        }
+      }
       return Promise.resolve(null);
     });
     await Promise.all(promises);
@@ -572,6 +616,8 @@ const HomeScreen: React.FC = () => {
         setCarDetailsData(prev => ({...prev, [bidCarId]: carIdData || {}}));
       }
       if (!livePrices[bidCarId]) {
+        const now = Date.now();
+        lastPriceFetchTime.current[bidCarId] = now;
         fetchLivePrice(bidCarId);
       }
     } catch (error: any) {
@@ -581,16 +627,9 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  const triggerFetchCarData = () => {
-    filteredLiveCars.forEach(car => {
-      const beadingId = car.beadingCarId || car.id;
-      const bidId = car.bidCarId || car.id;
-      if (!carDetailsData[bidId] || !carImageData[beadingId]) {
-        fetchCarImageAndDetails(beadingId, bidId);
-      }
-    });
-  };
+  // === REMOVED triggerFetchCarData function - it was causing continuous calls ===
 
+  // FIXED: Only fetch when NEW cars appear (not on every render)
   useEffect(() => {
     if (filteredLiveCars.length === prevFilteredLiveCarsLengthRef.current) {
       return;
@@ -606,19 +645,26 @@ const HomeScreen: React.FC = () => {
     });
 
     prevFilteredLiveCarsLengthRef.current = filteredLiveCars.length;
-  }, [filteredLiveCars]);
+  }, [filteredLiveCars.length]); // Only depend on LENGTH, not the entire array
 
   // === MODAL HANDLERS ===
   const openCarDetailsModal = async (car: Car) => {
     setSelectedCarForDetails(car);
     setCarDetailsModalVisible(true);
     if (car.id) {
-      await fetchLivePrice(car.id);
+      const now = Date.now();
+      const lastFetch = lastPriceFetchTime.current[car.id] || 0;
+      if (now - lastFetch > 2000) {
+        lastPriceFetchTime.current[car.id] = now;
+        await fetchLivePrice(car.id);
+      }
     }
   };
 
   const openBidModal = async (bidCarId: string) => {
     try {
+      const now = Date.now();
+      lastPriceFetchTime.current[bidCarId] = now;
       const priceData = await fetchLivePrice(bidCarId);
       const currentPrice = priceData?.price ?? 0;
 
@@ -632,17 +678,7 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (modalVisible && selectedCar) {
-      const livePriceData = livePrices[selectedCar.bidCarId];
-      const currentPrice = livePriceData?.price ?? 0;
-      if (currentPrice > 0 && selectedCar.price !== currentPrice) {
-        setSelectedCar(prev => (prev ? {...prev, price: currentPrice} : null));
-      }
-    }
-
-    triggerFetchCarData();
-  }, [modalVisible, livePrices[selectedCar?.bidCarId || '']?.price]);
+  // REMOVED the problematic useEffect that was calling triggerFetchCarData
 
   useEffect(() => {
     if (!modalVisible) {
@@ -655,7 +691,7 @@ const HomeScreen: React.FC = () => {
         });
       }
     }
-  }, [modalVisible]);
+  }, [modalVisible, selectedCar?.bidCarId]);
 
   const handleBidInputChange = (text: string) => {
     if (selectedCar) {
